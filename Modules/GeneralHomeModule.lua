@@ -14,7 +14,7 @@ VFlow.registerModule(MODULE_KEY, {
 
 local CHANGELOG = {
     {
-        version = "0.1.1",
+        version = "0.1.2",
         date = "2026-03-18",
         content = {
             "修复若干BUG",
