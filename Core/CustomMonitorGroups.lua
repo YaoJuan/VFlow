@@ -11,6 +11,16 @@ if not VFlow then return end
 
 local MODULE_KEY = "VFlow.CustomMonitor"
 local PP = VFlow.PixelPerfect  -- 完美像素工具
+local VALID_STRATA = {
+    BACKGROUND = true,
+    LOW = true,
+    MEDIUM = true,
+    HIGH = true,
+    DIALOG = true,
+    FULLSCREEN = true,
+    FULLSCREEN_DIALOG = true,
+    TOOLTIP = true,
+}
 
 -- =========================================================
 -- 模块状态
@@ -45,7 +55,11 @@ local function createBarContainer(storeKey, spellID, cfg)
 
     local name = string.format("VFlow_CM_%s_%d", storeKey, spellID)
     local container = CreateFrame("Frame", name, UIParent)
-    container:SetFrameStrata("MEDIUM")
+    local strata = cfg.frameStrata
+    if not VALID_STRATA[strata] then
+        strata = "MEDIUM"
+    end
+    container:SetFrameStrata(strata)
     container:SetFrameLevel(10)
     PP.SetSize(container, w, h)
     container:SetMovable(true)

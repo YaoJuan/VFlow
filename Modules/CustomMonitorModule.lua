@@ -61,32 +61,44 @@ local ICON_POSITION_OPTIONS = {
     { "下方", "BOTTOM" },
 }
 
+local FRAME_STRATA_OPTIONS = {
+    { "背景", "BACKGROUND" },
+    { "低", "LOW" },
+    { "中", "MEDIUM" },
+    { "高", "HIGH" },
+    { "对话框", "DIALOG" },
+    { "全屏", "FULLSCREEN" },
+    { "全屏对话框", "FULLSCREEN_DIALOG" },
+    { "工具提示", "TOOLTIP" },
+}
+
 -- =========================================================
 -- SECTION 3: 默认配置
 -- =========================================================
 
 local function getDefaultSpellConfig()
     return {
-        enabled          = false,
-        monitorType      = "cooldown",
-        isChargeSpell    = false, -- 是否为充能技能（前置判断）
-        shape            = "bar",
-        x                = 0,
-        y                = 0,
-        barLength        = 200,
-        barThickness     = 20,
-        barColor         = { r = 0.2, g = 0.6, b = 1, a = 1 }, -- 充能技能：已充能颜色 / 冷却技能：就绪时颜色
-        rechargeColor    = { r = 0.5, g = 0.8, b = 1, a = 1 }, -- 充能技能：充能中颜色 / 冷却技能：冷却中颜色
-        barTexture       = "Solid",
-        barDirection     = "horizontal",
-        barFillMode      = "drain",
-        ringSize         = 150,                                 -- 环形尺寸
-        ringTexture      = "10",                               -- 环形材质：10/20/30/40
-        ringColor        = { r = 0.2, g = 0.6, b = 1, a = 1 }, -- 环形颜色
-        borderColor      = { r = 0, g = 0, b = 0, a = 1 },
-        borderThickness  = "1",
-        segmentGap       = 0, -- 分段间距（像素，0=边框重合）
-        timerFont        = {
+        enabled               = false,
+        monitorType           = "cooldown",
+        isChargeSpell         = false, -- 是否为充能技能（前置判断）
+        shape                 = "bar",
+        frameStrata           = "MEDIUM",
+        x                     = 0,
+        y                     = 0,
+        barLength             = 200,
+        barThickness          = 20,
+        barColor              = { r = 0.2, g = 0.6, b = 1, a = 1 }, -- 充能技能：已充能颜色 / 冷却技能：就绪时颜色
+        rechargeColor         = { r = 0.5, g = 0.8, b = 1, a = 1 }, -- 充能技能：充能中颜色 / 冷却技能：冷却中颜色
+        barTexture            = "Solid",
+        barDirection          = "horizontal",
+        barFillMode           = "drain",
+        ringSize              = 150,                           -- 环形尺寸
+        ringTexture           = "10",                          -- 环形材质：10/20/30/40
+        ringColor             = { r = 0.2, g = 0.6, b = 1, a = 1 }, -- 环形颜色
+        borderColor           = { r = 0, g = 0, b = 0, a = 1 },
+        borderThickness       = "1",
+        segmentGap            = 0, -- 分段间距（像素，0=边框重合）
+        timerFont             = {
             size     = 14,
             font     = "默认",
             outline  = "OUTLINE",
@@ -95,24 +107,24 @@ local function getDefaultSpellConfig()
             offsetX  = 0,
             offsetY  = 0,
         },
-        maxStacks        = 5,
-        stackThreshold1  = 0,
-        stackColor1      = { r = 1, g = 0.5, b = 0, a = 1 },
-        stackThreshold2  = 0,
-        stackColor2      = { r = 1, g = 0, b = 0, a = 1 },
-        showIcon         = true,
-        iconSize         = 20,
-        iconPosition     = "LEFT",
-        iconOffsetX      = 0,
-        iconOffsetY      = 0,
+        maxStacks             = 5,
+        stackThreshold1       = 0,
+        stackColor1           = { r = 1, g = 0.5, b = 0, a = 1 },
+        stackThreshold2       = 0,
+        stackColor2           = { r = 1, g = 0, b = 0, a = 1 },
+        showIcon              = true,
+        iconSize              = 20,
+        iconPosition          = "LEFT",
+        iconOffsetX           = 0,
+        iconOffsetY           = 0,
         -- 显示条件
-        visibilityMode   = "hide", -- "show" 或 "hide"
-        hideInCombat     = false,
-        hideOnMount      = false,
-        hideOnSkyriding  = false,
-        hideInSpecial    = false, -- 载具/宠物对战
-        hideNoTarget     = false,
-        hideWhenInactive = false, -- 仅对BUFF监控：BUFF未激活时隐藏
+        visibilityMode        = "hide", -- "show" 或 "hide"
+        hideInCombat          = false,
+        hideOnMount           = false,
+        hideOnSkyriding       = false,
+        hideInSpecial         = false, -- 载具/宠物对战
+        hideNoTarget          = false,
+        hideWhenInactive      = false, -- 仅对BUFF监控：BUFF未激活时隐藏
         hideInCooldownManager = false, -- 在冷却管理器中隐藏
     }
 end
@@ -236,6 +248,13 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                 cols = 12,
                 items = getShapeItems,    -- 传递函数，Grid会在渲染时调用
                 dependsOn = "monitorType" -- 依赖monitorType，变化时重新渲染
+            },
+            {
+                type = "dropdown",
+                key = "frameStrata",
+                label = "图形层级",
+                cols = 12,
+                items = FRAME_STRATA_OPTIONS
             },
         },
         not isSkill and {
@@ -603,7 +622,7 @@ local function renderContent(container, menuKey)
 
     -- 左侧：构建选择器 Grid layout 并渲染
     local function refreshSelectorPanel()
-        local onSelect = function(spellID)
+        local onSelect       = function(spellID)
             selectedID = spellID
             refreshSelectorPanel()
             refreshConfigPanel()
@@ -644,69 +663,69 @@ local function renderContent(container, menuKey)
         table.insert(selectorLayout, {
             type       = "for",
             cols       = 6,
-                dependsOn  = "_refresh",
-                dataSource = function()
-                    local items = {}
-                    local seen  = {}
+            dependsOn  = "_refresh",
+            dataSource = function()
+                local items = {}
+                local seen  = {}
 
-                    if isSkill then
-                        -- 1. 已配置且当前角色可用的技能（过滤其他职业历史记录）
-                        for spellID in pairs(store) do
-                            local isKnown = (IsPlayerSpell and IsPlayerSpell(spellID)) or
-                                (IsSpellKnown and IsSpellKnown(spellID))
-                            if not seen[spellID] and isKnown then
-                                seen[spellID] = true
-                                local si = C_Spell.GetSpellInfo(spellID)
-                                if si and si.name then
-                                    table.insert(items, {
-                                        spellID = spellID,
-                                        name    = si.name,
-                                        icon    = si.iconID or 134400,
-                                    })
-                                end
-                            end
-                        end
-                        -- 2. 当前专精重要技能（去重后追加，方便发现可配置的技能）
-                        local trackedSkills = VFlow.State.get("trackedSkills") or {}
-                        for spellID, info in pairs(trackedSkills) do
-                            if not seen[spellID] then
-                                seen[spellID] = true
+                if isSkill then
+                    -- 1. 已配置且当前角色可用的技能（过滤其他职业历史记录）
+                    for spellID in pairs(store) do
+                        local isKnown = (IsPlayerSpell and IsPlayerSpell(spellID)) or
+                            (IsSpellKnown and IsSpellKnown(spellID))
+                        if not seen[spellID] and isKnown then
+                            seen[spellID] = true
+                            local si = C_Spell.GetSpellInfo(spellID)
+                            if si and si.name then
                                 table.insert(items, {
                                     spellID = spellID,
-                                    name    = info.name,
-                                    icon    = info.icon,
+                                    name    = si.name,
+                                    icon    = si.iconID or 134400,
                                 })
                             end
                         end
-                    else
-                        local trackedBuffs = VFlow.State.get("trackedBuffs") or {}
-                        for spellID, info in pairs(trackedBuffs) do
-                            table.insert(items, { spellID = spellID, name = info.name, icon = info.icon })
+                    end
+                    -- 2. 当前专精重要技能（去重后追加，方便发现可配置的技能）
+                    local trackedSkills = VFlow.State.get("trackedSkills") or {}
+                    for spellID, info in pairs(trackedSkills) do
+                        if not seen[spellID] then
+                            seen[spellID] = true
+                            table.insert(items, {
+                                spellID = spellID,
+                                name    = info.name,
+                                icon    = info.icon,
+                            })
                         end
                     end
+                else
+                    local trackedBuffs = VFlow.State.get("trackedBuffs") or {}
+                    for spellID, info in pairs(trackedBuffs) do
+                        table.insert(items, { spellID = spellID, name = info.name, icon = info.icon })
+                    end
+                end
 
-                    table.sort(items, function(a, b) return a.name < b.name end)
-                    return items
+                table.sort(items, function(a, b) return a.name < b.name end)
+                return items
+            end,
+            template   = {
+                type        = "iconButton",
+                size        = 36,
+                icon        = function(d) return d.icon end,
+                borderColor = function(d)
+                    if d.spellID == selectedID then
+                        return PRIMARY_COLOR
+                    elseif enabledIDs[d.spellID] then
+                        return SUCCESS_COLOR
+                    end
+                    return nil
                 end,
-                template   = {
-                    type        = "iconButton",
-                    size        = 36,
-                    icon        = function(d) return d.icon end,
-                    borderColor = function(d)
-                        if d.spellID == selectedID then
-                            return PRIMARY_COLOR
-                        elseif enabledIDs[d.spellID] then
-                            return SUCCESS_COLOR
-                        end
-                        return nil
-                    end,
-                    tooltip     = function(d)
-                        return function(tip)
-                            tip:SetSpellByID(d.spellID)
-                            tip:AddLine("|cff00ff00点击配置|r", 1, 1, 1)
-                        end
-                    end,
-                    onClick     = function(d) onSelect(d.spellID) end,
+                tooltip     = function(d)
+                    return function(tip)
+                        tip:SetSpellByID(d.spellID)
+                        tip:AddLine("|cff00ff00点击配置|r", 1, 1, 1)
+                    end
+                end,
+                onClick     = function(d) onSelect(d.spellID) end,
             },
         })
 

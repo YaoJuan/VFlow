@@ -1207,6 +1207,7 @@ local function CreateBarFrame(spellID, cfg, container)
 
     local barFrame = CreateFrame("Frame", nil, container)
     barFrame:SetAllPoints(container)
+    barFrame:SetFrameStrata(container:GetFrameStrata())
     barFrame:SetFrameLevel(container:GetFrameLevel() + 1)
 
     local bg = barFrame:CreateTexture(nil, "BACKGROUND")
@@ -1221,6 +1222,7 @@ local function CreateBarFrame(spellID, cfg, container)
 
     if cfg.showIcon ~= false then
         local iconFrame = CreateFrame("Frame", nil, container)
+        iconFrame:SetFrameStrata(container:GetFrameStrata())
         local iconSize  = cfg.iconSize or 20
         iconFrame:SetSize(iconSize, iconSize)
         local pos = cfg.iconPosition or "LEFT"
