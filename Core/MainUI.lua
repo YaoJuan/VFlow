@@ -486,8 +486,17 @@ renderMenu = function()
                     deleteBtn:SetScript("OnClick", function()
                         UI.dialog(UIParent, "删除分组", "删除后该分组配置将被移除，是否继续？", function()
                             local groups = getCustomGroupsForCategory(category.key)
+                            local moduleKey = nil
+                            if category.key == "skills" then
+                                moduleKey = "VFlow.Skills"
+                            elseif category.key == "buffs" then
+                                moduleKey = "VFlow.Buffs"
+                            end
                             if groups and item.customIndex and groups[item.customIndex] then
                                 table.remove(groups, item.customIndex)
+                                if moduleKey and VFlow.Store and VFlow.Store.set then
+                                    VFlow.Store.set(moduleKey, "customGroups", groups)
+                                end
                             end
                             loadCustomGroups()
                             if currentMenuKey == item.key then

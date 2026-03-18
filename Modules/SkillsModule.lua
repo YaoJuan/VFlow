@@ -417,6 +417,7 @@ VFlow.Modules.Skills = {
             name = groupName,
             config = getDefaultGroupConfig()
         })
+        VFlow.Store.set(MODULE_KEY, "customGroups", db.customGroups)
         return #db.customGroups
     end,
 

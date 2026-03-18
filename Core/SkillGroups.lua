@@ -195,12 +195,27 @@ local function EnsureGroupContainer(groupIdx)
     return container
 end
 
+local function ReleaseGroupContainer(groupIdx)
+    local container = _groupContainers[groupIdx]
+    if not container then return end
+    VFlow.DragFrame.unregister(container)
+    container:Hide()
+    container:SetParent(nil)
+    _groupContainers[groupIdx] = nil
+end
+
 -- 初始化所有容器（用于配置变更时）
 local function InitGroupContainers()
     local db = VFlow.getDB(MODULE_KEY)
-    if not db or not db.customGroups then return end
+    local groups = db and db.customGroups
 
-    for i, group in ipairs(db.customGroups) do
+    for groupIdx in pairs(_groupContainers) do
+        ReleaseGroupContainer(groupIdx)
+    end
+
+    if not groups then return end
+
+    for i, group in ipairs(groups) do
         if group and group.config then
             EnsureGroupContainer(i)
         end

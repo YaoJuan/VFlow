@@ -295,6 +295,11 @@ end)
 -- =========================================================
 
 VFlow.Store.watch(MODULE_KEY, "CustomMonitorGroups", function(key, value)
+    if key == "skills" or key == "buffs" then
+        syncStore(key, value or {})
+        return
+    end
+
     local storeKey, spellID = parseStoreKey(key)
     if not storeKey or not spellID then return end
 
