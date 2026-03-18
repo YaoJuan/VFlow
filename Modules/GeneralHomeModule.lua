@@ -14,10 +14,10 @@ VFlow.registerModule(MODULE_KEY, {
 
 local CHANGELOG = {
     {
-        version = "0.1.2",
-        date = "2026-03-18",
+        version = "0.1.3",
+        date = "2026-03-19",
         content = {
-            "修复若干BUG",
+            "性能优化, 修复若干BUG",
         }
     },
     {
