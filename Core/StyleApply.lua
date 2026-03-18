@@ -202,7 +202,7 @@ function StyleApply.ApplyKeybind(button, cfg)
     if VFlow.Keybind then
         local spellID = VFlow.Keybind.GetSpellIDFromIcon(button)
         if spellID then
-            keyText = VFlow.Keybind.GetKeybindForSpell(spellID) or ""
+            keyText = VFlow.Keybind.GetKeyForSpell(spellID) or ""
         end
     end
 
@@ -217,13 +217,13 @@ function StyleApply.ApplyKeybind(button, cfg)
     end
 
     local fs = button._vf_keybindFrame._text
+    if cfg.keybindFont then
+        StyleApply.ApplyFontStyle(fs, cfg.keybindFont, "_vf_kb")
+    end
+
     if fs and keyText ~= (fs._vf_lastText or "") then
         fs:SetText(keyText)
         fs._vf_lastText = keyText
-    end
-
-    if cfg.keybindFont then
-        StyleApply.ApplyFontStyle(fs, cfg.keybindFont, "_vf_kb")
     end
 
     if keyText and keyText ~= "" then
