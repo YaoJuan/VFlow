@@ -39,6 +39,15 @@ local defaults = {
         offsetX = -2,
         offsetY = 0,
     },
+    stackFont = {
+        size = 12,
+        font = "默认",
+        outline = "OUTLINE",
+        color = { r = 1, g = 1, b = 1, a = 1 },
+        position = "CENTER",
+        offsetX = 0,
+        offsetY = 0,
+    },
 }
 
 local db = VFlow.getDB(MODULE_KEY, defaults)
@@ -128,6 +137,7 @@ local function renderContent(container)
                 Grid.fontGroup("durationFont", "持续时间文本样式"),
             }
         },
+        Grid.fontGroup("stackFont", "层数文本样式"),
     }
 
     Grid.render(container, layout, db, MODULE_KEY)

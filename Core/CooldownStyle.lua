@@ -195,8 +195,7 @@ local function ApplyBuffBarFrameStyle(frame, cfg, frameWidth, frameHeight)
     local nameText = (bar and bar.Name) or frame.Name or frame.SpellName or frame.NameText
     local durationText = (bar and bar.Duration) or frame.Duration or frame.DurationText or
         StyleApply.GetCooldownFontString(frame)
-    local appText = (icon and (icon.Applications or icon.Count)) or StyleApply.GetStackFontString(frame) or
-        frame.ApplicationsText
+    local appText = StyleApply.GetStackFontString(frame) or frame.ApplicationsText
 
     local iconPosition = cfg.iconPosition or "LEFT"
     local iconGap = cfg.iconGap or 0
@@ -320,6 +319,7 @@ local function ApplyBuffBarFrameStyle(frame, cfg, frameWidth, frameHeight)
         else
             nameText:SetAlpha(1)
             nameText:Show()
+            nameText._vf_bar_name_pos = nil
             StyleApply.ApplyFontStyle(nameText, cfg.nameFont, "_vf_bar_name")
         end
     end
@@ -335,13 +335,24 @@ local function ApplyBuffBarFrameStyle(frame, cfg, frameWidth, frameHeight)
         else
             durationText:SetAlpha(1)
             durationText:Show()
+            durationText._vf_bar_dur_pos = nil
             StyleApply.ApplyFontStyle(durationText, cfg.durationFont, "_vf_bar_dur")
         end
     end
 
+    -- 层数文本：reparent 到 bar 并应用样式，Show/Hide 由 Blizzard 根据层数自行控制
     if appText then
-        appText:Hide()
-        appText:SetAlpha(0)
+        local stackFont = cfg.stackFont
+        local anchorTo = bar or frame
+        if appText.SetParent and appText:GetParent() ~= anchorTo then
+            appText:SetParent(anchorTo)
+        end
+        appText:ClearAllPoints()
+        local pos = (stackFont and stackFont.position) or "CENTER"
+        local ox = (stackFont and stackFont.offsetX) or 0
+        local oy = (stackFont and stackFont.offsetY) or 0
+        appText:SetPoint("CENTER", anchorTo, pos, ox, oy)
+        StyleApply.ApplyFontStyle(appText, stackFont, "_vf_bar_stack")
     end
 end
 
