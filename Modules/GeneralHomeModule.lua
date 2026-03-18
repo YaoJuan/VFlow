@@ -14,6 +14,13 @@ VFlow.registerModule(MODULE_KEY, {
 
 local CHANGELOG = {
     {
+        version = "0.1.1",
+        date = "2026-03-18",
+        content = {
+            "修复若干BUG",
+        }
+    },
+    {
         version = "0.1.0",
         date = "2026-03-18",
         content = {
@@ -39,7 +46,7 @@ local function renderContent(container, menuKey)
     local primaryColor = UI.style.colors.primary
     local githubColor = { 1, 1, 1, 1 }
     local ngaColor = { 1, 1, 1, 1 }
-    
+
     local layout = {
         -- LOGO
         {
@@ -54,9 +61,10 @@ local function renderContent(container, menuKey)
 
                 local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
                 fs:SetPoint("TOP", texture, "BOTTOM", 0, -10)
-                local addonVersion = C_AddOns and C_AddOns.GetAddOnMetadata("VFlow", "Version") or GetAddOnMetadata and GetAddOnMetadata("VFlow", "Version") or ""
+                local addonVersion = C_AddOns and C_AddOns.GetAddOnMetadata("VFlow", "Version") or
+                GetAddOnMetadata and GetAddOnMetadata("VFlow", "Version") or ""
                 fs:SetText(addonVersion ~= "" and ("VFlow v" .. addonVersion) or "VFlow")
-                fs:SetTextColor(unpack(primaryColor)) 
+                fs:SetTextColor(unpack(primaryColor))
             end
         },
 
@@ -117,7 +125,7 @@ local function renderContent(container, menuKey)
                 end
             }
         },
-        
+
         -- 相关链接
         { type = "spacer", height = 10, cols = 24 },
         { type = "subtitle", text = "相关链接", cols = 24 },
@@ -131,7 +139,7 @@ local function renderContent(container, menuKey)
                 label:SetPoint("TOPLEFT", 0, 0)
                 label:SetText("GitHub 地址")
                 label:SetTextColor(unpack(githubColor))
-                
+
                 local editBox = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
                 editBox:SetPoint("TOPLEFT", 0, -20)
                 editBox:SetPoint("TOPRIGHT", -10, -20)
@@ -146,11 +154,11 @@ local function renderContent(container, menuKey)
                 })
                 editBox:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
                 editBox:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
-                
+
                 local link = "https://github.com/VinkyDev/VFlow"
                 editBox:SetText(link)
                 editBox:SetAutoFocus(false)
-                
+
                 editBox:SetScript("OnEditFocusGained", function(self)
                     self:HighlightText()
                     self:SetBackdropBorderColor(unpack(primaryColor))
@@ -173,7 +181,7 @@ local function renderContent(container, menuKey)
                 label:SetPoint("TOPLEFT", 0, 0)
                 label:SetText("NGA 帖子")
                 label:SetTextColor(unpack(ngaColor))
-                
+
                 local editBox = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
                 editBox:SetPoint("TOPLEFT", 0, -20)
                 editBox:SetPoint("TOPRIGHT", 0, -20)
@@ -188,11 +196,11 @@ local function renderContent(container, menuKey)
                 })
                 editBox:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
                 editBox:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
-                
+
                 local link = "https://ngabbs.com/read.php?tid=46210925"
                 editBox:SetText(link)
                 editBox:SetAutoFocus(false)
-                
+
                 editBox:SetScript("OnEditFocusGained", function(self)
                     self:HighlightText()
                     self:SetBackdropBorderColor(unpack(primaryColor))
@@ -220,14 +228,14 @@ local function renderContent(container, menuKey)
                 render = function(parent, _, _, item)
                     local log = item._forData
                     local y = 0
-                    
+
                     -- 版本号和日期
                     local header = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                     header:SetPoint("TOPLEFT", 0, y)
                     header:SetText(log.version .. " (" .. log.date .. ")")
                     header:SetTextColor(unpack(primaryColor))
                     y = y - 20
-                    
+
                     -- 内容
                     for _, content in ipairs(log.content) do
                         local line = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -235,7 +243,7 @@ local function renderContent(container, menuKey)
                         line:SetText("• " .. content)
                         y = y - 18
                     end
-                    
+
                     y = y - 5 -- 底部间距
                     parent:SetHeight(-y)
                 end
