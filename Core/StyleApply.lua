@@ -744,9 +744,29 @@ function StyleApply.HookAlertManager()
     alertManagerHooked = true
 end
 
+local function ScanActiveAlerts()
+    local viewers = {
+        _G["EssentialCooldownViewer"],
+        _G["UtilityCooldownViewer"],
+        _G["BuffIconCooldownViewer"],
+    }
+    for _, viewer in ipairs(viewers) do
+        if viewer then
+            for _, child in ipairs({ viewer:GetChildren() }) do
+                if child and child.SpellActivationAlert
+                    and child.SpellActivationAlert:IsShown() then
+                    HideBlizzardGlow(child)
+                    StyleApply.ShowGlow(child)
+                end
+            end
+        end
+    end
+end
+
 function StyleApply.InitializeGlow()
     StyleApply.RefreshGlowCache()
     StyleApply.HookAlertManager()
+    ScanActiveAlerts()
 end
 
 -- =========================================================
