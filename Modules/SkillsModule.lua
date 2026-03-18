@@ -361,11 +361,11 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
         -- 字体设置
         {
             { type = "spacer", height = 10, cols = 24 },
-            Grid.fontGroup("stackFont", "堆叠文字样式"),
+            Grid.fontGroup("stackFont", "堆叠文本样式"),
             { type = "spacer", height = 10, cols = 24 },
-            Grid.fontGroup("cooldownFont", "冷却文字样式"),
+            Grid.fontGroup("cooldownFont", "冷却文本样式"),
             { type = "spacer", height = 10, cols = 24 },
-            Grid.fontGroup("keybindFont", "键位文字样式"),
+            Grid.fontGroup("keybindFont", "键位文本样式"),
         }
     )
 

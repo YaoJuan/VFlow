@@ -565,9 +565,9 @@ local function renderContent(container, menuKey)
         local configPath    = storeKey .. "." .. selectedID
         local monitorTypes  = isSkill and MONITOR_TYPE_SKILL_OPTIONS or MONITOR_TYPE_BUFF_OPTIONS
         local fontLabel     = isSkill
-            and "冷却时间文字样式"
-            or ({ duration = "剩余时间文字样式", stacks = "堆叠层数文字样式" })[spellConfig.monitorType]
-            or "文字样式"
+            and "冷却时间文本样式"
+            or ({ duration = "剩余时间文本样式", stacks = "堆叠层数文本样式" })[spellConfig.monitorType]
+            or "文本样式"
 
         local spellInfo     = C_Spell.GetSpellInfo(selectedID)
         local spellName     = spellInfo and spellInfo.name or ("ID: " .. selectedID)
