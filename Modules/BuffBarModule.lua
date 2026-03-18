@@ -21,6 +21,16 @@ local defaults = {
     iconGap = 1,
     showName = true,
     showDuration = true,
+    showStack = true,
+    stackFont = {
+        size = 12,
+        font = "默认",
+        outline = "OUTLINE",
+        color = { r = 1, g = 1, b = 1, a = 1 },
+        position = "BOTTOMRIGHT",
+        offsetX = -2,
+        offsetY = 2,
+    },
     nameFont = {
         size = 12,
         font = "默认",
@@ -39,15 +49,6 @@ local defaults = {
         offsetX = -2,
         offsetY = 0,
     },
-    stackFont = {
-        size = 12,
-        font = "默认",
-        outline = "OUTLINE",
-        color = { r = 1, g = 1, b = 1, a = 1 },
-        position = "CENTER",
-        offsetX = 0,
-        offsetY = 0,
-    },
 }
 
 local db = VFlow.getDB(MODULE_KEY, defaults)
@@ -58,11 +59,23 @@ local function renderContent(container)
     local layout = {
         { type = "title", text = "BUFF条", cols = 24 },
         { type = "separator", cols = 24 },
+        {
+            type = "interactiveText",
+            cols = 24,
+            text = "BUFF条显示{冷却管理器}增益分类中追踪的状态栏内容，定制化的条形监控推荐使用自定义图形监控。",
+            links = {
+                ["冷却管理器"] = function()
+                    VFlow.openCooldownManager()
+                end,
+            }
+        },
+        { type = "spacer", height = 6, cols = 24 },
 
         { type = "subtitle", text = "显示", cols = 24 },
         { type = "separator", cols = 24 },
         { type = "checkbox", key = "showName", label = "显示BUFF名称", cols = 12 },
         { type = "checkbox", key = "showDuration", label = "显示持续时间", cols = 12 },
+        { type = "checkbox", key = "showStack", label = "显示层数", cols = 12 },
         { type = "spacer", height = 10, cols = 24 },
 
         { type = "subtitle", text = "布局", cols = 24 },
@@ -137,7 +150,14 @@ local function renderContent(container)
                 Grid.fontGroup("durationFont", "持续时间文本样式"),
             }
         },
-        Grid.fontGroup("stackFont", "层数文本样式"),
+        {
+            type = "if",
+            dependsOn = "showStack",
+            condition = function(cfg) return cfg.showStack == true end,
+            children = {
+                Grid.fontGroup("stackFont", "层数文本样式"),
+            }
+        },
     }
 
     Grid.render(container, layout, db, MODULE_KEY)
