@@ -394,6 +394,13 @@ local function RefreshSkillViewer(viewer, cfg)
     end
 
     if #mainVisible == 0 then
+        -- 隐藏所有无纹理的空图标，避免显示黑框
+        for _, icon in ipairs(allIcons) do
+            if icon:IsShown() and not (icon.Icon and icon.Icon:GetTexture()) then
+                icon:SetAlpha(0)
+            end
+        end
+        viewer:SetSize(1, 1)
         viewer._vf_refreshing = false
         return
     end
