@@ -384,10 +384,15 @@ end
 -- 移除遮罩与覆盖层
 function StyleApply.ApplyOverlayHides(button, cfg)
     if not cfg then return end
-    
+
     local hideOverlay = cfg.hideIconOverlay
     local hideTexture = cfg.hideIconOverlayTexture
-    
+
+    -- 缓存键：避免在配置不变时重复遍历所有 region
+    local cacheKey = (hideOverlay and 1 or 0) + (hideTexture and 2 or 0)
+    if button._vf_overlayHideKey == cacheKey then return end
+    button._vf_overlayHideKey = cacheKey
+
     for _, region in ipairs({ button:GetRegions() }) do
         if region and region.IsObjectType then
             if region:IsObjectType("Texture") then
@@ -395,7 +400,7 @@ function StyleApply.ApplyOverlayHides(button, cfg)
                 if SafeEquals(atlas, "UI-HUD-CoolDownManager-IconOverlay") then
                     if hideOverlay then region:Hide() else region:Show() end
                 end
-                
+
                 local texID = region.GetTexture and region:GetTexture()
                 if SafeEquals(texID, 6707800) then -- BLIZZARD_ICON_OVERLAY_TEXTURE_FILE_ID
                     if hideTexture then region:Hide() else region:Show() end
@@ -403,8 +408,11 @@ function StyleApply.ApplyOverlayHides(button, cfg)
             elseif region:IsObjectType("MaskTexture") then
                 local atlas = region.GetAtlas and region:GetAtlas()
                 if SafeEquals(atlas, "UI-HUD-CoolDownManager-Mask") then
-                    if hideTexture and button.Icon and button.Icon.RemoveMaskTexture then
-                         pcall(button.Icon.RemoveMaskTexture, button.Icon, region)
+                    -- 只移除一次，避免每帧重复调用触发渲染状态变更
+                    if hideTexture and button.Icon and button.Icon.RemoveMaskTexture
+                        and not button._vf_maskRemoved then
+                        button._vf_maskRemoved = true
+                        pcall(button.Icon.RemoveMaskTexture, button.Icon, region)
                     end
                 end
             end

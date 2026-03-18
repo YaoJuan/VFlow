@@ -441,8 +441,8 @@ end
 
 local function ClearAllHooks()
     for frame in pairs(_hookedFrames) do
-        _hookedFrames[frame].barIDs = {}
-        _frameToBarKeys[frame] = {}
+        _hookedFrames[frame] = nil
+        _frameToBarKeys[frame] = nil
     end
     wipe(_auraKeyToBars)
     wipe(_barToAuraKey)
@@ -906,7 +906,36 @@ local function UpdateChargeBar(barFrame, spellID)
                 borderFrame:ClearAllPoints()
                 borderFrame:SetPoint("LEFT", barFrame._segContainer, "LEFT", logOffset, 0)
                 PP.SetSize(borderFrame, logSegW, totalH)
-                PP.CreateBorder(borderFrame, borderThickness, bc, true)
+                local needRebuild = (not borderFrame._vfBorderThickness)
+                    or (borderFrame._vfBorderThickness ~= borderThickness)
+                    or (borderFrame._vfBorderW ~= logSegW)
+                    or (borderFrame._vfBorderH ~= totalH)
+                if needRebuild then
+                    PP.CreateBorder(borderFrame, borderThickness, bc, true)
+                    borderFrame._vfBorderThickness = borderThickness
+                    borderFrame._vfBorderW = logSegW
+                    borderFrame._vfBorderH = totalH
+                    borderFrame._vfBorderColor = {
+                        r = bc.r or 1,
+                        g = bc.g or 1,
+                        b = bc.b or 1,
+                        a = bc.a or 1,
+                    }
+                else
+                    local last = borderFrame._vfBorderColor
+                    local r = bc.r or 1
+                    local g = bc.g or 1
+                    local b = bc.b or 1
+                    local a = bc.a or 1
+                    if (not last)
+                        or (last.r ~= r)
+                        or (last.g ~= g)
+                        or (last.b ~= b)
+                        or (last.a ~= a) then
+                        PP.UpdateBorderColor(borderFrame, bc)
+                        borderFrame._vfBorderColor = { r = r, g = g, b = b, a = a }
+                    end
+                end
                 borderFrame:Show()
 
                 -- 更新下一个分段的偏移量
