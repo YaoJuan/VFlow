@@ -14,10 +14,10 @@ VFlow.registerModule(MODULE_KEY, {
 
 local CHANGELOG = {
     {
-        version = "0.1.4",
+        version = "0.1.5",
         date = "2026-03-19",
         content = {
-            "修复堆叠文本层级BUG, 确保文本在正确的层级上显示",
+            "修复堆叠文本层级BUG,修复自定义图形监控高占用BUG",
         }
     },
     {
