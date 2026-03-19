@@ -1244,6 +1244,8 @@ UpdateStackBar = function(barFrame, spellID, barKey)
     if barFrame._text then
         if isSecret then
             barFrame._text:SetText(stacks)
+        elseif stacks == 0 then
+            barFrame._text:SetText("")
         else
             barFrame._text:SetText(tostring(stacks))
         end

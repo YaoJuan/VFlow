@@ -38,6 +38,20 @@ local function SafeSetShadow(fs, enabled)
     end
 end
 
+local function EnsureHideZeroTextHook(fs)
+    if not fs or fs._vf_hideZeroTextHooked then return end
+    if not hooksecurefunc or not fs.SetText then return end
+    hooksecurefunc(fs, "SetText", function(self, value)
+        if type(value) ~= "number" then return end
+        local text = C_StringUtil and C_StringUtil.TruncateWhenZero and C_StringUtil.TruncateWhenZero(value)
+        if text == nil then
+            text = (value == 0) and "" or tostring(value)
+        end
+        self:SetText(text)
+    end)
+    fs._vf_hideZeroTextHooked = true
+end
+
 -- =========================================================
 -- 全局样式缓存
 -- =========================================================
@@ -97,13 +111,16 @@ function StyleApply.GetCooldownFontString(button)
 end
 
 function StyleApply.GetStackFontString(button)
+    local fs
     if button.Applications and button.Applications.Applications then
-        return button.Applications.Applications
+        fs = button.Applications.Applications
+    elseif button.ChargeCount and button.ChargeCount.Current then
+        fs = button.ChargeCount.Current
     end
-    if button.ChargeCount and button.ChargeCount.Current then
-        return button.ChargeCount.Current
+    if fs then
+        EnsureHideZeroTextHook(fs)
     end
-    return nil
+    return fs
 end
 
 -- =========================================================
