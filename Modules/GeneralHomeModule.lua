@@ -14,6 +14,13 @@ VFlow.registerModule(MODULE_KEY, {
 
 local CHANGELOG = {
     {
+        version = "0.1.4",
+        date = "2026-03-19",
+        content = {
+            "修复堆叠文本层级BUG, 确保文本在正确的层级上显示",
+        }
+    },
+    {
         version = "0.1.3",
         date = "2026-03-19",
         content = {
@@ -62,7 +69,7 @@ local function renderContent(container, menuKey)
                 local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
                 fs:SetPoint("TOP", texture, "BOTTOM", 0, -10)
                 local addonVersion = C_AddOns and C_AddOns.GetAddOnMetadata("VFlow", "Version") or
-                GetAddOnMetadata and GetAddOnMetadata("VFlow", "Version") or ""
+                    GetAddOnMetadata and GetAddOnMetadata("VFlow", "Version") or ""
                 fs:SetText(addonVersion ~= "" and ("VFlow v" .. addonVersion) or "VFlow")
                 fs:SetTextColor(unpack(primaryColor))
             end

@@ -599,25 +599,25 @@ end
 local glowStartFunctions, glowStopFunctions
 
 glowStartFunctions = {
-    pixel = function(frame, color)
+    pixel = function(frame, color, frameLevel)
         if not LCG then return end
         LCG.PixelGlow_Start(frame, color,
             glowCache.pixelLines, glowCache.pixelFrequency,
             glowCache.pixelLength, glowCache.pixelThickness,
-            glowCache.pixelXOffset, glowCache.pixelYOffset, false, GLOW_KEY)
+            glowCache.pixelXOffset, glowCache.pixelYOffset, false, GLOW_KEY, frameLevel)
     end,
-    autocast = function(frame, color)
+    autocast = function(frame, color, frameLevel)
         if not LCG then return end
         LCG.AutoCastGlow_Start(frame, color,
             glowCache.autocastParticles, glowCache.autocastFrequency,
             glowCache.autocastScale,
-            glowCache.autocastXOffset, glowCache.autocastYOffset, GLOW_KEY)
+            glowCache.autocastXOffset, glowCache.autocastYOffset, GLOW_KEY, frameLevel)
     end,
-    button = function(frame, color)
+    button = function(frame, color, frameLevel)
         if not LCG then return end
-        LCG.ButtonGlow_Start(frame, color, glowCache.buttonFrequency)
+        LCG.ButtonGlow_Start(frame, color, glowCache.buttonFrequency, frameLevel)
     end,
-    proc = function(frame, color)
+    proc = function(frame, color, frameLevel)
         if not LCG then return end
         LCG.ProcGlow_Start(frame, {
             color = color,
@@ -626,6 +626,7 @@ glowStartFunctions = {
             xOffset = glowCache.procXOffset,
             yOffset = glowCache.procYOffset,
             key = GLOW_KEY,
+            frameLevel = frameLevel,
         })
     end,
 }
@@ -643,7 +644,8 @@ function StyleApply.ShowGlow(frame)
     local color = GetGlowColor()
     local startFn = glowStartFunctions[glowCache.type]
     if startFn then
-        startFn(frame, color)
+        local frameLevel = frame:GetFrameLevel() + 5
+        startFn(frame, color, frameLevel)
         frame._vf_glowActive = true
         frame._vf_glowType = glowCache.type
         activeGlowFrames[frame] = true
