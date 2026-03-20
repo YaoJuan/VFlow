@@ -398,9 +398,15 @@ end
 local function RefreshBuffBarViewer(viewer, cfg)
     local _pt = Profiler.start("CDS:RefreshBuffBarViewer")
     if not viewer or not cfg then Profiler.stop(_pt) return false end
-    if viewer._vf_refreshing then Profiler.stop(_pt) return false end
+    if viewer._vf_refreshing then
+        -- 标记需要再次刷新，避免丢失刷新请求
+        viewer._vf_needsReRefresh = true
+        Profiler.stop(_pt)
+        return false
+    end
     if not IsViewerReady(viewer) then Profiler.stop(_pt) return false end
     viewer._vf_refreshing = true
+    viewer._vf_needsReRefresh = false
 
     -- 1. 收集可见帧并排序
     local frames = CollectBuffBarFrames(viewer)
@@ -438,12 +444,18 @@ local function RefreshBuffBarViewer(viewer, cfg)
     end
 
     viewer._vf_refreshing = false
+
+    -- 如果刷新期间有新的刷新请求被阻塞，延迟再刷一次
+    if viewer._vf_needsReRefresh then
+        viewer._vf_needsReRefresh = false
+        C_Timer.After(0, function()
+            RefreshBuffBarViewer(viewer, cfg)
+        end)
+    end
+
     Profiler.stop(_pt)
     return true
 end
-
--- =========================================================
--- 刷新Essential/Utility技能Viewer
 -- =========================================================
 
 local function RefreshSkillViewer(viewer, cfg)
@@ -975,9 +987,11 @@ RequestBuffBarRefresh = function()
     Profiler.count("CDS:RequestBuffBarRefresh")
     if buffBarRefreshPending then return end
     buffBarRefreshPending = true
-    -- 同步执行，避免闪烁
-    DoBuffBarRefresh(0)
-    buffBarRefreshPending = false
+    -- 延迟到帧末尾执行，与Release合并，避免同一帧内重复刷新
+    C_Timer.After(0, function()
+        buffBarRefreshPending = false
+        DoBuffBarRefresh(0)
+    end)
 end
 
 local function DoRefresh()
@@ -1030,8 +1044,24 @@ SetupHooks = function()
     local skillHandler = function() RequestRefresh(0) end
     local buffHandler = function() RequestBuffRefresh() end
     local buffBarHandler = function() RequestBuffBarRefresh() end
-    local buffBarImmediateHandler = function()
+
+    -- 帧末尾合并刷新：同一帧内多次 BuffBar Release 只做一次 DoBuffBarRefresh
+    -- Release 时帧可能尚未完全隐藏，延迟到帧末尾确保状态一致
+    local _pendingBarSyncRefresh = false
+    local _barSyncRefreshFrame = CreateFrame("Frame")
+    _barSyncRefreshFrame:Hide()
+    _barSyncRefreshFrame:SetScript("OnUpdate", function(self)
+        self:Hide()
+        _pendingBarSyncRefresh = false
         DoBuffBarRefresh(0)
+    end)
+
+    local buffBarReleaseHandler = function()
+        if BuffBarRuntime then BuffBarRuntime.markDirty() end
+        if not _pendingBarSyncRefresh then
+            _pendingBarSyncRefresh = true
+            _barSyncRefreshFrame:Show()
+        end
     end
 
     -- 帧末尾合并刷新：同一帧内多次 provisionalPlaceAndQueue 只做一次 DoBuffRefresh
@@ -1176,7 +1206,7 @@ SetupHooks = function()
         end)
 
         if BuffBarCooldownViewer.itemFramePool then
-            hooksecurefunc(BuffBarCooldownViewer.itemFramePool, "Release", buffBarImmediateHandler)
+            hooksecurefunc(BuffBarCooldownViewer.itemFramePool, "Release", buffBarReleaseHandler)
         end
     end
 

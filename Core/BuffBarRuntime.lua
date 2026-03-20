@@ -1,6 +1,5 @@
 -- =========================================================
 -- VFlow BuffBarRuntime - BUFF条运行时监控
--- 对标ACDM：持续监控viewer状态，检测变化并触发布局/样式刷新
 -- =========================================================
 
 local VFlow = _G.VFlow
@@ -22,7 +21,7 @@ local handlers = nil
 local cachedFrames = {}
 local cachedLayoutIndex = {}
 local cachedCount = 0
-local cachedChildCount = 0
+local cachedShownCount = 0  -- 追踪可见帧数量（Release不改变children数量，但会改变shown数量）
 
 -- viewer/cfg 缓存（避免每帧调 getViewer/getConfig）
 local cachedViewer = nil
@@ -100,7 +99,7 @@ function BuffBarRuntime.disable()
     burst = 0
     nextUpdate = 0
     cachedCount = 0
-    cachedChildCount = 0
+    cachedShownCount = 0
     cachedViewer = nil
     cachedCfg = nil
     needRefetchRefs = true
@@ -143,10 +142,24 @@ function BuffBarRuntime.enable()
         if now < nextUpdate then Profiler.stop(_pt) return end
         nextUpdate = now + throttle
 
-        -- 快速路径：watchdog 阶段只检查 children 数量
+        -- 快速路径：watchdog 阶段检查可见帧数量变化
+        -- 注意：不能只检查 children 数量，因为 Release 只是隐藏帧而不移除子级
         if not dirty and burst == 0 then
-            local cc = select('#', viewer:GetChildren())
-            if cc == cachedChildCount then
+            local shownCount = 0
+            if viewer.itemFramePool then
+                for f in viewer.itemFramePool:EnumerateActive() do
+                    if f and f.IsShown and f:IsShown() then
+                        shownCount = shownCount + 1
+                    end
+                end
+            else
+                for _, f in ipairs({ viewer:GetChildren() }) do
+                    if f and f.IsShown and f:IsShown() then
+                        shownCount = shownCount + 1
+                    end
+                end
+            end
+            if shownCount == cachedShownCount then
                 Profiler.stop(_pt)
                 return
             end
@@ -160,8 +173,10 @@ function BuffBarRuntime.enable()
             if handlers.refresh then
                 handlers.refresh(viewer, cfg)
             end
-            SnapshotVisible(visible)
-            cachedChildCount = select('#', viewer:GetChildren())
+            -- refresh 后重新收集可见帧来更新快照（refresh可能改变了可见状态）
+            local refreshedVisible = handlers.collectVisible and handlers.collectVisible(viewer, false) or visible
+            SnapshotVisible(refreshedVisible)
+            cachedShownCount = #refreshedVisible
             dirty = false
             burst = BURST_TICKS
             Profiler.stop(_pt)
