@@ -160,11 +160,12 @@ local function CreateIconFrame()
     icon:SetAllPoints()
     icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
-    -- 冷却动画
+    -- 冷却动画（SetReverse(true)：已过去的区域变黑，与系统BUFF遮罩逻辑一致）
     local cooldown = CreateFrame("Cooldown", nil, frame, "CooldownFrameTemplate")
     cooldown:SetAllPoints()
     cooldown:SetDrawEdge(false)
     cooldown:SetDrawSwipe(true)
+    cooldown:SetReverse(true)
 
     frame.Icon = icon         -- 使用大写 Icon，与 BuffGroups 保持一致
     frame.icon = icon         -- 保留小写兼容
