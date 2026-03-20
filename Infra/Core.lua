@@ -31,7 +31,9 @@ VFlow.eventFrame = eventFrame
 -- @param event string 事件名称
 -- @param owner string 所有者标识（用于批量注销）
 -- @param callback function 回调函数
-function VFlow.on(event, owner, callback)
+-- @param units string|nil 可选，传入单位字符串时使用RegisterUnitEvent（如 "player"）
+--                         多个单位用逗号分隔，如 "player,target"
+function VFlow.on(event, owner, callback, units)
     if type(event) ~= "string" then
         error("VFlow.on: event必须是字符串", 2)
     end
@@ -52,7 +54,16 @@ function VFlow.on(event, owner, callback)
     end
 
     -- 注册到WoW事件系统
-    pcall(eventFrame.RegisterEvent, eventFrame, event)
+    if units then
+        -- 使用RegisterUnitEvent，只监听指定单位，避免全团事件开销
+        local unitList = {}
+        for u in units:gmatch("[^,]+") do
+            unitList[#unitList + 1] = u
+        end
+        pcall(eventFrame.RegisterUnitEvent, eventFrame, event, unpack(unitList))
+    else
+        pcall(eventFrame.RegisterEvent, eventFrame, event)
+    end
 
     -- 存储回调
     if not eventCallbacks[event] then

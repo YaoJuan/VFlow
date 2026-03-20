@@ -399,10 +399,6 @@ local function GetAuraDataByInstanceID(auraInstanceID, preferredUnit, secondUnit
         data = C_UnitAuras.GetAuraDataByAuraInstanceID("player", auraInstanceID)
         if data then return data, "player" end
     end
-    if preferredUnit ~= "target" and secondUnit ~= "target" then
-        data = C_UnitAuras.GetAuraDataByAuraInstanceID("target", auraInstanceID)
-        if data then return data, "target" end
-    end
     if preferredUnit ~= "pet" and secondUnit ~= "pet" then
         data = C_UnitAuras.GetAuraDataByAuraInstanceID("pet", auraInstanceID)
         if data then return data, "pet" end
@@ -1029,8 +1025,8 @@ UpdateDurationBar = function(barFrame, spellID, barKey)
         if d then
             unit = "player"
         else
-            d = C_UnitAuras.GetAuraDataByAuraInstanceID("target", barFrame._trackedAuraInstanceID)
-            if d then unit = "target" end
+            d = C_UnitAuras.GetAuraDataByAuraInstanceID("pet", barFrame._trackedAuraInstanceID)
+            if d then unit = "pet" end
         end
         if d then
             auraActive     = true
@@ -1042,7 +1038,7 @@ UpdateDurationBar = function(barFrame, spellID, barKey)
     -- 路径3：按 spellID 直接扫描（首次触发/CDM 尚未激活时兜底）
     -- 战斗中 spellId 是 secret value，pcall 比较失败时直接退出循环
     if not auraActive then
-        for _, scanUnit in ipairs({ "player", "target", "pet" }) do
+        for _, scanUnit in ipairs({ "player", "pet" }) do
             local auraData
             if C_UnitAuras.GetPlayerAuraBySpellID and scanUnit == "player" then
                 auraData = C_UnitAuras.GetPlayerAuraBySpellID(spellID)

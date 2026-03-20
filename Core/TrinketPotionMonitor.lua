@@ -537,15 +537,13 @@ VFlow.on("PLAYER_EQUIPMENT_CHANGED", "TrinketPotionMonitor", function(event, slo
 end)
 
 VFlow.on("UNIT_SPELLCAST_SUCCEEDED", "TrinketPotionMonitor", function(event, unit, _, spellID)
-    if unit ~= "player" then return end
-
     for sid, poolData in pairs(_iconPool) do
         if sid == spellID then
             ActivateIcon(spellID, poolData.itemID)
             break
         end
     end
-end)
+end, "player")
 
 -- =========================================================
 -- Store监听
