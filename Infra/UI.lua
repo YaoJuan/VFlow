@@ -522,12 +522,13 @@ function UI.slider(parent, label, min, max, value, step, onChange)
 
     container.slider:SetScript("OnMouseUp", function(self)
         isDragging = false
-        if onChange then onChange(self:GetValue()) end
+        local val = math.floor(self:GetValue() / step + 0.5) * step
+        updateVisuals(val)
+        if onChange then onChange(val) end
     end)
 
     container.slider:SetScript("OnValueChanged", function(self, val)
-        -- 移除自动取整，保留精度以支持微调
-        -- val = math.floor(val / step + 0.5) * step
+        val = math.floor(val / step + 0.5) * step
         updateVisuals(val)
         if not isDragging and onChange then
             onChange(val)
