@@ -95,6 +95,7 @@ local function getDefaultSpellConfig()
         ringSize              = 150,                           -- 环形尺寸
         ringTexture           = "10",                          -- 环形材质：10/20/30/40
         ringColor             = { r = 0.2, g = 0.6, b = 1, a = 1 }, -- 环形颜色
+        bgColor               = { r = 0.1, g = 0.1, b = 0.1, a = 0.5 }, -- 背景颜色
         borderColor           = { r = 0, g = 0, b = 0, a = 1 },
         borderThickness       = "1",
         segmentGap            = 0, -- 分段间距（像素，0=边框重合）
@@ -159,6 +160,7 @@ local function getOrCreateConfig(store, spellID)
     if not store[spellID] then
         store[spellID] = getDefaultSpellConfig()
     end
+    VFlow.Utils.applyDefaults(store[spellID], getDefaultSpellConfig())
     -- 每次获取配置时检测技能类型（确保最新）
     store[spellID].isChargeSpell = detectChargeSpell(spellID)
     return store[spellID]
@@ -168,7 +170,7 @@ end
 -- SECTION 5: 共享布局构建器（右侧配置面板）
 -- =========================================================
 
-local mergeLayouts = VFlow.LayoutUtils.mergeLayouts
+local mergeLayouts = VFlow.Utils.mergeLayouts
 
 local function visibilityGroup(isBuffMonitor)
     local items = {
@@ -438,8 +440,9 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
         },
         {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "边框配置", cols = 24 },
+            { type = "subtitle", text = "样式配置", cols = 24 },
             { type = "separator", cols = 24 },
+            { type = "colorPicker", key = "bgColor", label = "背景颜色", hasAlpha = true, cols = 8 },
             { type = "colorPicker", key = "borderColor", label = "边框颜色", hasAlpha = true, cols = 8 },
             {
                 type = "dropdown",

@@ -515,7 +515,8 @@ local function CreateSegments(barFrame, count, cfg, isStack, isRing)
         local bg = segContainer:CreateTexture(nil, "BACKGROUND")
         bg:SetAllPoints()
         bg:SetTexture(ringTex)
-        bg:SetVertexColor(0.1, 0.1, 0.1, 0.5)
+        local bgc = cfg.bgColor or { r = 0.1, g = 0.1, b = 0.1, a = 0.5 }
+        bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
         bg:Show()
         barFrame._segBGs[1] = bg
 
@@ -628,7 +629,8 @@ local function CreateSegments(barFrame, count, cfg, isStack, isRing)
         end
 
         local bg = segFrame:CreateTexture(nil, "BACKGROUND")
-        bg:SetColorTexture(0.1, 0.1, 0.1, 0.5)
+        local bgc = cfg.bgColor or { r = 0.1, g = 0.1, b = 0.1, a = 0.5 }
+        bg:SetColorTexture(bgc.r, bgc.g, bgc.b, bgc.a)
         bg:SetAllPoints(segFrame)
 
         local seg = CreateFrame("StatusBar", nil, segFrame)
@@ -792,7 +794,8 @@ local function UpdateChargeBar(barFrame, spellID)
     if not barFrame._chargeBG then
         local bg = barFrame._segContainer:CreateTexture(nil, "BACKGROUND")
         bg:SetAllPoints(barFrame._segContainer)
-        bg:SetColorTexture(0.1, 0.1, 0.1, 0.5)
+        local bgc = cfg.bgColor or { r = 0.1, g = 0.1, b = 0.1, a = 0.5 }
+        bg:SetColorTexture(bgc.r, bgc.g, bgc.b, bgc.a)
         barFrame._chargeBG = bg
     end
 
@@ -823,8 +826,15 @@ local function UpdateChargeBar(barFrame, spellID)
     if not barFrame._refreshChargeText then
         local tf = cfg.timerFont or {}
         local fc = tf.color or { r = 1, g = 1, b = 1, a = 1 }
-        -- 挂到 textHolder 上，使其能独立定位且层级在条之上
-        local txt = barFrame._textHolder:CreateFontString(nil, "OVERLAY")
+        -- 裁剪容器：跟随 _refreshCharge，隐藏时文字自动隐藏，SetClipsChildren 处理溢出
+        local clip = CreateFrame("Frame", nil, barFrame._refreshCharge)
+        clip:SetAllPoints(barFrame._refreshCharge)
+        clip:SetFrameLevel(barFrame._textHolder:GetFrameLevel())
+        clip:SetClipsChildren(true)
+        clip:EnableMouse(false)
+        barFrame._refreshChargeClip = clip
+
+        local txt = clip:CreateFontString(nil, "OVERLAY")
         txt:SetFont(
             VFlow.UI.resolveFontPath(tf.font),
             tf.size or 14,
@@ -833,7 +843,7 @@ local function UpdateChargeBar(barFrame, spellID)
         txt:SetTextColor(fc.r, fc.g, fc.b, fc.a)
         txt:SetJustifyH("CENTER")
         local anchor = tf.position or "CENTER"
-        txt:SetPoint(anchor, barFrame._refreshCharge, anchor, tf.offsetX or 0, tf.offsetY or 0)
+        txt:SetPoint(anchor, clip, anchor, tf.offsetX or 0, tf.offsetY or 0)
         barFrame._refreshChargeText = txt
     end
 
@@ -1264,7 +1274,8 @@ local function CreateBarFrame(spellID, cfg, container)
     if cfg.shape == "ring" then
         bg:SetColorTexture(0, 0, 0, 0)
     else
-        bg:SetColorTexture(0.1, 0.1, 0.1, 0.5)
+        local bgc = cfg.bgColor or { r = 0.1, g = 0.1, b = 0.1, a = 0.5 }
+        bg:SetColorTexture(bgc.r, bgc.g, bgc.b, bgc.a)
     end
     barFrame._bg = bg
 
@@ -1302,7 +1313,8 @@ local function CreateBarFrame(spellID, cfg, container)
 
     local textHolder = CreateFrame("Frame", nil, barFrame)
     textHolder:SetAllPoints(barFrame)
-    textHolder:SetFrameLevel(barFrame:GetFrameLevel() + 6)
+    textHolder:SetFrameStrata(container:GetFrameStrata())
+    textHolder:SetFrameLevel(container:GetFrameLevel() + 50)
     textHolder:EnableMouse(false)
     barFrame._textHolder = textHolder
 
@@ -1430,6 +1442,30 @@ end
 
 local _elapsed = 0
 
+local function ApplyBgColor(barFrame)
+    local cfg = barFrame._cfg
+    local bgc = cfg.bgColor or { r = 0.1, g = 0.1, b = 0.1, a = 0.5 }
+    if barFrame._bg then
+        if cfg.shape == "ring" then
+            barFrame._bg:SetColorTexture(0, 0, 0, 0)
+        else
+            barFrame._bg:SetColorTexture(bgc.r, bgc.g, bgc.b, bgc.a)
+        end
+    end
+    if barFrame._chargeBG then
+        barFrame._chargeBG:SetColorTexture(bgc.r, bgc.g, bgc.b, bgc.a)
+    end
+    if barFrame._segBGs then
+        for _, bg in ipairs(barFrame._segBGs) do
+            if cfg.shape == "ring" then
+                bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+            else
+                bg:SetColorTexture(bgc.r, bgc.g, bgc.b, bgc.a)
+            end
+        end
+    end
+end
+
 local function UpdateAllBars()
     for spellID, barFrame in pairs(_activeSkillBars) do
         -- 检查显示条件
@@ -1440,7 +1476,7 @@ local function UpdateAllBars()
             if container then container:Hide() end
         else
             if container then container:Show() end
-
+            ApplyBgColor(barFrame)
             -- 使用配置中的isChargeSpell判断
             if not barFrame._cfg.isChargeSpell then
                 -- 普通冷却条需要检查_segsDirty
@@ -1474,6 +1510,7 @@ local function UpdateAllBars()
             barFrame._nextInactiveProbeAt = nil
         end
         if doUpdate then
+            ApplyBgColor(barFrame)
             if barFrame._segsDirty then
                 local cw = barFrame._segContainer:GetWidth()
                 if cw and cw > 0 then
