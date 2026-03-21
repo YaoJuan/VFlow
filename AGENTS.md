@@ -129,6 +129,8 @@ VFlow.Modules = VFlow.Modules or {}
 VFlow.Modules.NewModule = { renderContent = renderContent }
 ```
 
+- **跨模块只读**：若目标模块可能未加载或尚未执行过 `getDB(moduleKey, defaults)`，用 `VFlow.getDBIfReady(moduleKey)`（就绪则返回 DB，否则 `nil`，不抛错、不隐式 init）；本模块自己的配置仍用 `getDB(MODULE_KEY, defaults)`。
+
 ### 5.2 嵌套配置处理
 
 ```lua

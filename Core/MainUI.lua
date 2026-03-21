@@ -203,6 +203,16 @@ local menuItems = {
             -- 自定义BUFF组会动态添加
         }
     },
+    -- 额外CD监控（物品等）
+    {
+        type = "category",
+        key = "items",
+        label = "额外CD监控",
+        children = {
+            { key = "item_monitor", label = "主组", module = "Items" },
+            -- 自定义物品组会动态添加
+        }
+    },
     -- 自定义监控
     {
         type = "category",
@@ -246,6 +256,10 @@ local STATIC_BUFF_CHILDREN = {
     { key = "buff_trinket_potion", label = "饰品&药水", module = "Buffs" },
 }
 
+local STATIC_ITEM_CHILDREN = {
+    { key = "item_monitor", label = "主组", module = "Items" },
+}
+
 local function cloneChildren(items)
     local copied = {}
     for i, item in ipairs(items) do
@@ -279,6 +293,9 @@ local function getCustomGroupsForCategory(categoryKey)
     if categoryKey == "buffs" and VFlow.Modules.Buffs and VFlow.Modules.Buffs.getCustomGroups then
         return VFlow.Modules.Buffs.getCustomGroups(), "buff_custom_"
     end
+    if categoryKey == "items" and VFlow.Modules.Items and VFlow.Modules.Items.getCustomGroups then
+        return VFlow.Modules.Items.getCustomGroups(), "item_custom_"
+    end
     return nil, nil
 end
 
@@ -289,6 +306,9 @@ local function getModuleForCategory(categoryKey)
     if categoryKey == "buffs" then
         return VFlow.Modules.Buffs
     end
+    if categoryKey == "items" then
+        return VFlow.Modules.Items
+    end
     return nil
 end
 
@@ -298,10 +318,11 @@ end
 
 loadCustomGroups = function()
     -- 查找索引
-    local skillsIndex, buffsIndex
+    local skillsIndex, buffsIndex, itemsIndex
     for i, item in ipairs(menuItems) do
         if item.key == "skills" then skillsIndex = i end
         if item.key == "buffs" then buffsIndex = i end
+        if item.key == "items" then itemsIndex = i end
     end
 
     if skillsIndex then
@@ -331,6 +352,35 @@ loadCustomGroups = function()
                     module = "Buffs",
                     isCustom = true,
                     customIndex = i
+                })
+            end
+        end
+    end
+
+    if itemsIndex then
+        menuItems[itemsIndex].children = {}
+        local mainLabel = "主组"
+        if VFlow.getDBIfReady then
+            local idb = VFlow.getDBIfReady("VFlow.Items")
+            if idb and idb.mainGroup and type(idb.mainGroup.groupName) == "string" and idb.mainGroup.groupName ~= "" then
+                mainLabel = idb.mainGroup.groupName
+            end
+        end
+        menuItems[itemsIndex].children[1] = {
+            key = "item_monitor",
+            label = mainLabel,
+            module = "Items",
+            mainGroupRename = true,
+        }
+        local itemGroups, itemPrefix = getCustomGroupsForCategory("items")
+        if itemGroups and itemPrefix then
+            for i, group in ipairs(itemGroups) do
+                table.insert(menuItems[itemsIndex].children, {
+                    key = itemPrefix .. i,
+                    label = group.name,
+                    module = "Items",
+                    isCustom = true,
+                    customIndex = i,
                 })
             end
         end
@@ -420,13 +470,15 @@ renderMenu = function()
                 text:SetPoint("LEFT", 34, 0)
                 if item.isCustom then
                     text:SetPoint("RIGHT", -40, 0)
+                elseif item.mainGroupRename then
+                    text:SetPoint("RIGHT", -22, 0)
                 end
                 text:SetJustifyH("LEFT")
                 text:SetWordWrap(false)
                 local textC = getColor("text", { 0.9, 0.9, 0.9, 1 })
                 text:SetTextColor(textC[1], textC[2], textC[3], 0.9)
                 btn.text = text
-                if item.isCustom then
+                if item.isCustom or item.mainGroupRename then
                     setSingleLineEllipsizedText(text, item.label)
                 else
                     text:SetText(item.label)
@@ -451,12 +503,12 @@ renderMenu = function()
                 btn.itemKey = item.key
                 table.insert(menuButtons, btn)
 
-                if item.isCustom then
+                if item.isCustom or item.mainGroupRename then
                     local iconColor = getColor("textDim", { 0.7, 0.7, 0.7, 1 })
 
                     local editBtn = CreateFrame("Button", nil, btn)
                     editBtn:SetSize(14, 14)
-                    editBtn:SetPoint("RIGHT", -22, 0)
+                    editBtn:SetPoint("RIGHT", item.mainGroupRename and -6 or -22, 0)
                     local editIcon = editBtn:CreateTexture(nil, "OVERLAY")
                     editIcon:SetAllPoints()
                     editIcon:SetTexture("Interface\\AddOns\\VFlow\\Assets\\Icons\\edit")
@@ -467,6 +519,7 @@ renderMenu = function()
                             itemKey = item.key,
                             customIndex = item.customIndex,
                             initialValue = item.label,
+                            mainGroupRename = item.mainGroupRename == true,
                         })
                     end)
                     editBtn:SetScript("OnEnter", function()
@@ -475,6 +528,10 @@ renderMenu = function()
                     editBtn:SetScript("OnLeave", function()
                         editIcon:SetVertexColor(iconColor[1], iconColor[2], iconColor[3], 0.9)
                     end)
+                end
+
+                if item.isCustom then
+                    local iconColor = getColor("textDim", { 0.7, 0.7, 0.7, 1 })
 
                     local deleteBtn = CreateFrame("Button", nil, btn)
                     deleteBtn:SetSize(14, 14)
@@ -491,6 +548,8 @@ renderMenu = function()
                                 moduleKey = "VFlow.Skills"
                             elseif category.key == "buffs" then
                                 moduleKey = "VFlow.Buffs"
+                            elseif category.key == "items" then
+                                moduleKey = "VFlow.Items"
                             end
                             if groups and item.customIndex and groups[item.customIndex] then
                                 table.remove(groups, item.customIndex)
@@ -498,10 +557,28 @@ renderMenu = function()
                                     VFlow.Store.set(moduleKey, "customGroups", groups)
                                 end
                             end
+                            if category.key == "items" then
+                                if VFlow.ItemGroups and VFlow.ItemGroups.invalidateSpellMap then
+                                    VFlow.ItemGroups.invalidateSpellMap()
+                                end
+                                if VFlow.RequestCooldownStyleRefresh then
+                                    VFlow.RequestCooldownStyleRefresh()
+                                end
+                            end
                             loadCustomGroups()
                             if currentMenuKey == item.key then
-                                local fallbackKey = category.key == "skills" and "skill_important" or "buff_monitor"
-                                local fallbackModule = category.key == "skills" and "Skills" or "Buffs"
+                                local fallbackKey = "general_home"
+                                local fallbackModule = "GeneralHome"
+                                if category.key == "skills" then
+                                    fallbackKey = "skill_important"
+                                    fallbackModule = "Skills"
+                                elseif category.key == "buffs" then
+                                    fallbackKey = "buff_monitor"
+                                    fallbackModule = "Buffs"
+                                elseif category.key == "items" then
+                                    fallbackKey = "item_monitor"
+                                    fallbackModule = "Items"
+                                end
                                 showContent(fallbackKey, fallbackModule)
                             end
                             renderMenu()
@@ -523,7 +600,7 @@ renderMenu = function()
                 yOffset = yOffset - 28
             end
 
-            if category.key == "skills" or category.key == "buffs" then
+            if category.key == "skills" or category.key == "buffs" or category.key == "items" then
                 local addBtn = CreateFrame("Button", nil, parent)
                 addBtn:SetSize(172, 26)
                 addBtn:SetPoint("TOPLEFT", 4, yOffset)
@@ -535,7 +612,15 @@ renderMenu = function()
 
                 local addText = addBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                 addText:SetPoint("LEFT", 46, 0)
-                addText:SetText("新建" .. (category.key == "skills" and "技能" or "BUFF") .. "组")
+                local labelText = "新建"
+                if category.key == "skills" then
+                    labelText = labelText .. "技能组"
+                elseif category.key == "buffs" then
+                    labelText = labelText .. "BUFF组"
+                elseif category.key == "items" then
+                    labelText = labelText .. "子组"
+                end
+                addText:SetText(labelText)
                 addText:SetTextColor(neutral[1], neutral[2], neutral[3], 0.6)
                 addBtn.text = addText
 
@@ -626,9 +711,15 @@ showAddGroupInput = function(btn, categoryKey, opts)
         end
 
         if isEdit then
-            local groups = getCustomGroupsForCategory(categoryKey)
-            if groups and opts.customIndex and groups[opts.customIndex] then
-                groups[opts.customIndex].name = groupName
+            if opts.mainGroupRename and categoryKey == "items" then
+                if groupName ~= "" and VFlow.Store and VFlow.Store.set then
+                    VFlow.Store.set("VFlow.Items", "mainGroup.groupName", groupName)
+                end
+            else
+                local groups = getCustomGroupsForCategory(categoryKey)
+                if groups and opts.customIndex and groups[opts.customIndex] then
+                    groups[opts.customIndex].name = groupName
+                end
             end
         else
             local module = getModuleForCategory(categoryKey)
@@ -640,6 +731,9 @@ showAddGroupInput = function(btn, categoryKey, opts)
         loadCustomGroups()
         inputFrame:Hide()
         renderMenu()
+        if isEdit and opts.mainGroupRename and currentMenuKey == "item_monitor" then
+            showContent("item_monitor", "Items")
+        end
         if isEdit and opts.itemKey and currentMenuKey == opts.itemKey then
             updateMenuSelection()
         end

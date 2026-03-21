@@ -16,6 +16,7 @@
     <Script file="Modules\BuffsModule.lua" />
     <Script file="Modules\BuffBarModule.lua" />
     <Script file="Modules\CustomMonitorModule.lua" />
+    <Script file="Modules\ItemsModule.lua" />
 
     <!-- 主UI入口 -->
     <Script file="Core\MainUI.lua" />

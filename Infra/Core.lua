@@ -177,6 +177,19 @@ function VFlow.getDB(moduleKey, defaults)
     return module.db
 end
 
+--- 若模块已注册且已通过 getDB(moduleKey, defaults) 完成初始化，则返回其 DB；否则返回 nil（不抛错、不隐式 init）
+-- 用于 Core/跨模块只读：目标模块可能未加载或加载顺序更早。
+function VFlow.getDBIfReady(moduleKey)
+    if type(moduleKey) ~= "string" then
+        return nil
+    end
+    local module = modules[moduleKey]
+    if not module or not module.db then
+        return nil
+    end
+    return module.db
+end
+
 -- =========================================================
 -- 初始化
 -- =========================================================

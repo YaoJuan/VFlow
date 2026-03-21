@@ -10,6 +10,9 @@
     <Script file="Core\BuffGroups.lua"/>
     <Script file="Core\TrinketPotionMonitor.lua"/>
     <Script file="Core\SkillGroups.lua"/>
+    <Script file="Core\ItemAutoData.lua"/>
+    <Script file="Core\ItemsManualOrder.lua"/>
+    <Script file="Core\ItemGroups.lua"/>
     <Script file="Core\CooldownStyle.lua"/>
     <Script file="Core\EditModeBridge.lua"/>
     <Script file="Core\CustomMonitorGroups.lua"/>

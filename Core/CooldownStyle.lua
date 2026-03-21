@@ -477,7 +477,15 @@ local function RefreshSkillViewer(viewer, cfg)
         mainVisible = StyleLayout.FilterVisible(allIcons)
     end
 
-    if #mainVisible == 0 then
+    if VFlow.ItemGroups and VFlow.ItemGroups.processSkillViewerIcons then
+        mainVisible = select(1, VFlow.ItemGroups.processSkillViewerIcons(viewer, mainVisible))
+        mainVisible = StyleLayout.FilterVisible(mainVisible)
+    end
+
+    local appendOnly = VFlow.ItemGroups and VFlow.ItemGroups.viewerHasAppendEntries
+        and VFlow.ItemGroups.viewerHasAppendEntries(viewer)
+
+    if #mainVisible == 0 and not appendOnly then
         -- 隐藏所有无纹理的空图标，避免显示黑框
         for _, icon in ipairs(allIcons) do
             if icon:IsShown() and not (icon.Icon and icon.Icon:GetTexture()) then
@@ -485,7 +493,14 @@ local function RefreshSkillViewer(viewer, cfg)
             end
         end
         viewer:SetSize(1, 1)
+        if VFlow.SkillGroups and VFlow.SkillGroups.layoutSkillGroups then
+            VFlow.SkillGroups.layoutSkillGroups(groupBuckets)
+        end
+        if VFlow.ItemGroups and VFlow.ItemGroups.refreshStandaloneLayouts then
+            VFlow.ItemGroups.refreshStandaloneLayouts()
+        end
         viewer._vf_refreshing = false
+        Profiler.stop(_pt)
         return
     end
 
@@ -505,23 +520,94 @@ local function RefreshSkillViewer(viewer, cfg)
     local fixedRowLengthByLimit = (cfg.fixedRowLengthByLimit == true)
     local rowAnchor = cfg.rowAnchor or "center"
 
-    local yAccum = 0
-
-    -- 计算最宽行宽度（用于居中对齐）
-    local maxRowW = 0
-    for ri, rIcons in ipairs(rows) do
-        local rw = (ri == 1) and iconW or row2W
-        local iconCountForWidth = fixedRowLengthByLimit and math.max(limit, 1) or #rIcons
-        local rcw = iconCountForWidth * (rw + spacingX) - spacingX
-        if rcw > maxRowW then maxRowW = rcw end
+    local rowCells
+    if VFlow.ItemGroups and VFlow.ItemGroups.mergeSkillRowsWithAppend then
+        rowCells = VFlow.ItemGroups.mergeSkillRowsWithAppend(viewer, limit, rows)
+    else
+        rowCells = {}
+        for ri, rIcons in ipairs(rows) do
+            rowCells[ri] = {}
+            for _, icon in ipairs(rIcons) do
+                rowCells[ri][#rowCells[ri] + 1] = { frame = icon, isItem = false }
+            end
+        end
     end
 
-    for rowIdx, rowIcons in ipairs(rows) do
-        local w = (rowIdx == 1) and iconW or row2W
-        local h = (rowIdx == 1) and iconH or row2H
+    -- 本 Viewer 无追加物品格时：清技能按钮上的样式/尺寸幂等缓存，避免刚从追加切回单独分组时仍沿用合并布局下的状态
+    local hasItemCells = false
+    for _, r in ipairs(rowCells) do
+        for _, c in ipairs(r) do
+            if c.isItem then
+                hasItemCells = true
+                break
+            end
+        end
+        if hasItemCells then break end
+    end
+    if not hasItemCells then
+        for _, icon in ipairs(mainVisible) do
+            if not icon._vf_itemAppendFrame then
+                icon._vf_btnStyleVer = nil
+                icon._vf_styleVer = nil
+                icon._vf_w = nil
+                icon._vf_h = nil
+                icon._vf_zoomKey = nil
+                icon._vf_cdSizeKey = nil
+            end
+        end
+    end
 
-        local rowContentW = #rowIcons * (w + spacingX) - spacingX
-        local rowBaseW = fixedRowLengthByLimit and (math.max(limit, 1) * (w + spacingX) - spacingX) or maxRowW
+    local function cellWidth(_, rowIdx)
+        return (rowIdx == 1) and iconW or row2W
+    end
+
+    local function cellHeight(_, rowIdx)
+        return (rowIdx == 1) and iconH or row2H
+    end
+
+    local function rowContentWidth(rCells, rowIdx)
+        local sum = 0
+        for i, cell in ipairs(rCells) do
+            sum = sum + cellWidth(cell, rowIdx)
+            if i < #rCells then
+                sum = sum + spacingX
+            end
+        end
+        return sum
+    end
+
+    local rowContentWs = {}
+    for ri, cells in ipairs(rowCells) do
+        rowContentWs[ri] = rowContentWidth(cells, ri)
+    end
+    local rowBaseWs = {}
+    for rowIdx, _ in ipairs(rowCells) do
+        local wSkill = (rowIdx == 1) and iconW or row2W
+        local rowContentW = rowContentWs[rowIdx] or 0
+        local slotBandW = math.max(limit, 1) * (wSkill + spacingX) - spacingX
+        if fixedRowLengthByLimit then
+            rowBaseWs[rowIdx] = math.max(slotBandW, rowContentW)
+        else
+            rowBaseWs[rowIdx] = rowContentW
+        end
+    end
+    local maxRowW = 0
+    for _, rb in ipairs(rowBaseWs) do
+        if rb > maxRowW then maxRowW = rb end
+    end
+    if not fixedRowLengthByLimit then
+        for ri = 1, #rowCells do
+            rowBaseWs[ri] = maxRowW
+        end
+    end
+
+    local yAccum = 0
+    local xAccum = 0
+
+    for rowIdx, rCells in ipairs(rowCells) do
+        local rowContentW = rowContentWs[rowIdx] or 0
+        local rowBaseW = rowBaseWs[rowIdx] or maxRowW
+
         local alignOffset = rowBaseW - rowContentW
         local anchorOffset = 0
         if rowAnchor == "right" then
@@ -532,38 +618,82 @@ local function RefreshSkillViewer(viewer, cfg)
         local startX = ((maxRowW - rowBaseW) / 2 + anchorOffset) * iconDir
         if iconDir == -1 then startX = -startX end
 
-        for colIdx, button in ipairs(rowIcons) do
-            StyleApply.ApplyIconSize(button, w, h)
+        local curX = startX
+        local rowMaxH = 0
+        local rowMaxW = 0
 
-            local x, y
-            if isH then
-                x = startX + (colIdx - 1) * (w + spacingX) * iconDir
-                y = growUp and yAccum or -yAccum
+        for colIdx, cell in ipairs(rCells) do
+            local button = cell.frame
+            if not button then
+                -- skip
             else
-                y = -(colIdx - 1) * (h + spacingY) * iconDir
-                local rowOffset = (rowIdx - 1) * (w + spacingX)
-                x = growUp and -rowOffset or rowOffset
-            end
+                local w = cellWidth(cell, rowIdx)
+                local h = cellHeight(cell, rowIdx)
+                if h > rowMaxH then rowMaxH = h end
+                if w > rowMaxW then rowMaxW = w end
 
-            StyleLayout.SetPointCached(button, "TOPLEFT", viewer, "TOPLEFT", x, y)
-            if button._vf_btnStyleVer ~= _buttonStyleVersion then
-                StyleApply.ApplyButtonStyle(button, cfg)
-                button._vf_btnStyleVer = _buttonStyleVersion
-            end
+                StyleApply.ApplyIconSize(button, w, h)
 
-            if MasqueSupport and MasqueSupport:IsActive() then
-                MasqueSupport:RegisterButton(button, button.Icon)
+                local x, y
+                if isH then
+                    x = curX
+                    y = growUp and yAccum or -yAccum
+                    curX = curX + (w + spacingX) * iconDir
+                else
+                    y = -(colIdx - 1) * (h + spacingY) * iconDir
+                    x = growUp and -xAccum or xAccum
+                end
+
+                StyleLayout.SetPointCached(button, "TOPLEFT", viewer, "TOPLEFT", x, y)
+
+                if cell.isItem then
+                    if button._vf_btnStyleVer ~= _buttonStyleVersion then
+                        StyleApply.ApplyButtonStyle(button, cfg)
+                        button._vf_btnStyleVer = _buttonStyleVersion
+                    end
+                    if VFlow.ItemGroups and VFlow.ItemGroups.refreshAppendFrameStack then
+                        VFlow.ItemGroups.refreshAppendFrameStack(button, cell.entry)
+                    end
+                    if MasqueSupport and MasqueSupport:IsActive() then
+                        MasqueSupport:RegisterButton(button, button.Icon)
+                    end
+                else
+                    if button._vf_btnStyleVer ~= _buttonStyleVersion then
+                        StyleApply.ApplyButtonStyle(button, cfg)
+                        button._vf_btnStyleVer = _buttonStyleVersion
+                    end
+                    if MasqueSupport and MasqueSupport:IsActive() then
+                        MasqueSupport:RegisterButton(button, button.Icon)
+                    end
+                end
             end
         end
 
-        yAccum = yAccum + h + spacingY
+        if isH then
+            yAccum = yAccum + rowMaxH + spacingY
+        else
+            xAccum = xAccum + rowMaxW + spacingX
+        end
     end
 
-    StyleLayout.UpdateViewerSizeToMatchIcons(viewer, mainVisible)
+    local bboxIcons = {}
+    for _, r in ipairs(rowCells) do
+        for _, cell in ipairs(r) do
+            local f = cell.frame
+            if f and f:IsShown() then
+                bboxIcons[#bboxIcons + 1] = f
+            end
+        end
+    end
+    StyleLayout.UpdateViewerSizeToMatchIcons(viewer, #bboxIcons > 0 and bboxIcons or mainVisible)
 
     -- 布局自定义技能组
     if VFlow.SkillGroups and VFlow.SkillGroups.layoutSkillGroups then
         VFlow.SkillGroups.layoutSkillGroups(groupBuckets)
+    end
+
+    if VFlow.ItemGroups and VFlow.ItemGroups.refreshStandaloneLayouts then
+        VFlow.ItemGroups.refreshStandaloneLayouts()
     end
 
     viewer._vf_refreshing = false
@@ -1016,6 +1146,9 @@ local function DoRefresh()
         RequestBuffBarRefresh()
     end
 end
+
+--- 供其他 Core（如 ItemGroups）在装备/法术变化时触发技能 viewer 重排
+VFlow.RequestCooldownStyleRefresh = DoRefresh
 
 local function RequestRefresh(delay)
     if delay and delay > 0 then

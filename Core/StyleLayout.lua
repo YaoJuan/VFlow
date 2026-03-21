@@ -37,7 +37,7 @@ function StyleLayout.CollectIcons(viewer)
     local seen = {}
 
     for _, child in ipairs({ viewer:GetChildren() }) do
-        if child and child.Icon then
+        if child and child.Icon and not child._vf_itemAppendFrame then
             seen[child] = true
             icons[#icons + 1] = child
         end
@@ -46,7 +46,7 @@ function StyleLayout.CollectIcons(viewer)
     -- 检查对象池
     if viewer.itemFramePool then
         for frame in viewer.itemFramePool:EnumerateActive() do
-            if frame and frame.Icon and not seen[frame] then
+            if frame and frame.Icon and not seen[frame] and not frame._vf_itemAppendFrame then
                 icons[#icons + 1] = frame
             end
         end
