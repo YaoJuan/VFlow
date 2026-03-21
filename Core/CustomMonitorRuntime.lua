@@ -74,6 +74,14 @@ local function ShouldShowBar(cfg, isBuffActive)
     end
 end
 
+--- 勾选「不在系统编辑模式中显示」时：仅暴雪编辑预览阶段隐藏，内部编辑模式仍显示
+local function IsHiddenForSystemEditOnly(cfg)
+    if not cfg or not cfg.hideInSystemEditMode then return false end
+    local sys = VFlow.State.systemEditMode or false
+    local internal = VFlow.State.internalEditMode or false
+    return sys and not internal
+end
+
 -- =========================================================
 -- SECTION 2: 模块状态
 -- =========================================================
@@ -1470,6 +1478,9 @@ local function UpdateAllBars()
     for spellID, barFrame in pairs(_activeSkillBars) do
         -- 检查显示条件
         local shouldShow = ShouldShowBar(barFrame._cfg, false)
+        if shouldShow and IsHiddenForSystemEditOnly(barFrame._cfg) then
+            shouldShow = false
+        end
         local container = barFrame._container
 
         if not shouldShow then
@@ -1526,6 +1537,9 @@ local function UpdateAllBars()
             isBuffActive = barFrame._lastKnownActive or false
         end
         local shouldShow = ShouldShowBar(cfg, isBuffActive)
+        if shouldShow and IsHiddenForSystemEditOnly(cfg) then
+            shouldShow = false
+        end
         local container = barFrame._container
 
         if not shouldShow then
@@ -1546,6 +1560,18 @@ _updateFrame:SetScript("OnUpdate", function(_, dt)
     Profiler.stop(_pt)
 end)
 _updateFrame:Hide()
+
+VFlow.State.watch("systemEditMode", "CustomMonitorRuntime_Vis", function()
+    if next(_activeSkillBars) or next(_activeBuffBars) then
+        UpdateAllBars()
+    end
+end)
+
+VFlow.State.watch("internalEditMode", "CustomMonitorRuntime_Vis", function()
+    if next(_activeSkillBars) or next(_activeBuffBars) then
+        UpdateAllBars()
+    end
+end)
 
 -- =========================================================
 -- SECTION 15: 事件响应

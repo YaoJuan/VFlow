@@ -121,6 +121,11 @@ local function createBarContainer(storeKey, spellID, cfg)
 
     VFlow.DragFrame.register(container, {
         label = labelText,
+        suppressSystemEditPreview = function()
+            local db = VFlow.getDB(MODULE_KEY)
+            local c = db and db[storeKey] and db[storeKey][spellID]
+            return c and c.hideInSystemEditMode
+        end,
         onPositionChanged = function(frame, point, nx, ny)
             local db = VFlow.getDB(MODULE_KEY)
             if db and db[storeKey] and db[storeKey][spellID] then

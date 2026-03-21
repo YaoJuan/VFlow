@@ -1085,6 +1085,20 @@ VFlow.toggleSystemEditMode = function()
     end
 end
 
+--- 开启插件内部编辑模式（用于「不在系统编辑模式中显示」的自定义图形监控等）
+VFlow.openInternalEditMode = function()
+    if VFlow.DragFrame and VFlow.DragFrame.setInternalEditMode then
+        VFlow.DragFrame.setInternalEditMode(true)
+    end
+end
+
+--- 切换插件内部编辑模式
+VFlow.toggleInternalEditMode = function()
+    if VFlow.DragFrame and VFlow.DragFrame.toggleInternalEditMode then
+        VFlow.DragFrame.toggleInternalEditMode()
+    end
+end
+
 VFlow.MainUI = {
     show = function()
         if VFlow.State.inCombat then

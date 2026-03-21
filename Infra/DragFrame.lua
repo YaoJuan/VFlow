@@ -201,6 +201,17 @@ end
 
 local updateAllSelections
 
+--- 仅暴雪系统编辑开启、且未开内部编辑时，按注册项配置隐藏拖拽选择层（自定义图形监控等）
+local function frameEditOverlaySuppressed(data)
+    if not data or not data.options then return false end
+    local fn = data.options.suppressSystemEditPreview
+    if type(fn) ~= "function" then return false end
+    local sys = VFlow.State.systemEditMode or false
+    local internal = VFlow.State.internalEditMode or false
+    if not sys or internal then return false end
+    return not not fn()
+end
+
 local function updateEffectiveEditMode()
     local isSystem = VFlow.State.systemEditMode or false
     local isInternal = VFlow.State.internalEditMode or false
@@ -296,6 +307,13 @@ end
 updateAllSelections = function()
     local isEditMode = VFlow.State.isEditMode
     ensureBackgroundClickCatcher()
+
+    if _selectedFrame and _registry[_selectedFrame] then
+        if frameEditOverlaySuppressed(_registry[_selectedFrame]) then
+            _selectedFrame = nil
+        end
+    end
+
     local shouldCatchBackgroundClick = isEditMode and (_selectedFrame ~= nil)
     if _backgroundClickCatcher then
         if shouldCatchBackgroundClick then
@@ -305,7 +323,7 @@ updateAllSelections = function()
         end
     end
     for frame, data in pairs(_registry) do
-        if isEditMode then
+        if isEditMode and not frameEditOverlaySuppressed(data) then
             local isSelected = (_selectedFrame == frame)
             data.selection:EnableKeyboard(isSelected)
             if isSelected then
@@ -493,6 +511,14 @@ VFlow.State.watch("isEditMode", "DragFrame", function(isEditMode, oldValue)
     if not isEditMode then
         _selectedFrame = nil
     end
+    updateAllSelections()
+end)
+
+VFlow.State.watch("systemEditMode", "DragFrame_Overlay", function()
+    updateAllSelections()
+end)
+
+VFlow.State.watch("internalEditMode", "DragFrame_Overlay", function()
     updateAllSelections()
 end)
 

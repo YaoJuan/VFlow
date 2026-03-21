@@ -127,6 +127,7 @@ local function getDefaultSpellConfig()
         hideNoTarget          = false,
         hideWhenInactive      = false, -- 仅对BUFF监控：BUFF未激活时隐藏
         hideInCooldownManager = false, -- 在冷却管理器中隐藏
+        hideInSystemEditMode  = false, -- 不在暴雪系统编辑模式中显示（仅内部编辑模式可预览/拖拽）
     }
 end
 
@@ -206,7 +207,7 @@ local function visibilityGroup(isBuffMonitor)
     return items
 end
 
-local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkill, isChargeSpell)
+local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkill, isChargeSpell, spellCfg)
     local Grid = VFlow.Grid
 
     -- 根据技能类型确定颜色配置标签
@@ -240,6 +241,7 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
             { type = "separator", cols = 24 },
             { type = "checkbox", key = "enabled", label = "启用该技能自定义监控", cols = 12 },
             { type = "checkbox", key = "hideInCooldownManager", label = "在冷却管理器中隐藏(需RL)", cols = 12 },
+            { type = "checkbox", key = "hideInSystemEditMode", label = "不在系统编辑模式中显示", cols = 12 },
         },
         {
             { type = "dropdown", key = "monitorType", label = "监控类型", cols = 12, items = monitorTypeOptions },
@@ -337,7 +339,15 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                 text  = "可在{编辑模式}中预览和拖拽修改位置",
                 links = {
                     ["编辑模式"] = function()
-                        VFlow.toggleSystemEditMode()
+                        if spellCfg and spellCfg.hideInSystemEditMode then
+                            if VFlow.toggleInternalEditMode then
+                                VFlow.toggleInternalEditMode()
+                            elseif VFlow.DragFrame and VFlow.DragFrame.toggleInternalEditMode then
+                                VFlow.DragFrame.toggleInternalEditMode()
+                            end
+                        else
+                            VFlow.toggleSystemEditMode()
+                        end
                     end,
                 },
             },
@@ -609,7 +619,7 @@ local function renderContent(container, menuKey)
                 { type = "title",     text = spellName .. spellTypeDesc, cols = 24 },
                 { type = "separator", cols = 24 },
             },
-            buildSpellConfigLayout(monitorTypes, fontLabel, isSkill, spellConfig.isChargeSpell)
+            buildSpellConfigLayout(monitorTypes, fontLabel, isSkill, spellConfig.isChargeSpell, spellConfig)
         )
         Grid.render(configFrame, layout, spellConfig, MODULE_KEY, configPath)
     end
