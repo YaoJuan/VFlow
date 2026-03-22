@@ -1167,6 +1167,30 @@ local function ProvisionalPlaceBuffFrame(frame, viewer, cfg)
 
     -- 3. 最后定位
     StyleLayout.SetPointCached(frame, "CENTER", viewer, "CENTER", x, y)
+
+    -- 主组图标挂在 UIParent 上，viewer:Hide() 不会级联隐藏，需单独跟踪
+    viewer._vf_detachedBuffIcons = viewer._vf_detachedBuffIcons or {}
+    local list = viewer._vf_detachedBuffIcons
+    local dup
+    for i = 1, #list do
+        if list[i] == frame then dup = true break end
+    end
+    if not dup then
+        list[#list + 1] = frame
+    end
+    if not viewer:IsShown() then
+        frame:Hide()
+    end
+end
+
+--- BUFF 图标为布局需要 parent 到 UIParent，需与 BuffIconCooldownViewer 显隐同步（VisibilityControl）
+local function HideBuffIconsDetachedFromViewer(viewer)
+    if not viewer or not viewer._vf_detachedBuffIcons then return end
+    for _, icon in ipairs(viewer._vf_detachedBuffIcons) do
+        if icon and icon.Hide and icon.GetParent and icon:GetParent() == UIParent then
+            icon:Hide()
+        end
+    end
 end
 
 local function RefreshBuffViewer(viewer, cfg)
@@ -1197,6 +1221,8 @@ local function RefreshBuffViewer(viewer, cfg)
     local isH = (viewer.isHorizontal ~= false)
     local iconDir = (viewer.iconDirection == 1) and 1 or -1
     local minSize = 400
+
+    viewer._vf_detachedBuffIcons = {}
 
     if isH then
         local blockW = iconLimit * (w + spacingX) - spacingX
@@ -1292,11 +1318,16 @@ local function RefreshBuffViewer(viewer, cfg)
         -- 3. 最后定位并显示
         StyleLayout.SetPointCached(button, "CENTER", viewer, "CENTER", x, y)
         button:SetAlpha(1)
+        viewer._vf_detachedBuffIcons[#viewer._vf_detachedBuffIcons + 1] = button
     end
 
     -- 布局自定义组（样式应用在LayoutBuffGroups内部完成）
     if VFlow.BuffGroups and VFlow.BuffGroups.layoutBuffGroups then
         VFlow.BuffGroups.layoutBuffGroups(groupBuckets)
+    end
+
+    if not viewer:IsShown() then
+        HideBuffIconsDetachedFromViewer(viewer)
     end
 
     ScanCooldownViewerIcons(viewer)
@@ -1661,6 +1692,9 @@ SetupHooks = function()
         SafeHook(BuffIconCooldownViewer, "Layout", buffHandler)
         SafeHook(BuffIconCooldownViewer, "SetPoint", buffHandler)
         BuffIconCooldownViewer:HookScript("OnShow", buffHandler)
+        BuffIconCooldownViewer:HookScript("OnHide", function(self)
+            HideBuffIconsDetachedFromViewer(self)
+        end)
         -- OnAcquireItemFrame：只做最少初始化，不做样式应用
         SafeHook(BuffIconCooldownViewer, "OnAcquireItemFrame", function(_, frame)
             if not frame then return end

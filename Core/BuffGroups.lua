@@ -167,6 +167,9 @@ local function InitGroupContainers()
 
     for i, container in pairs(_groupContainers) do
         VFlow.DragFrame.unregister(container)
+        if VFlow.VisibilityControl and VFlow.VisibilityControl.UnregisterFrame then
+            VFlow.VisibilityControl.UnregisterFrame(container)
+        end
         container:Hide()
         container:SetParent(nil)
         _groupContainers[i] = nil
@@ -227,8 +230,17 @@ local function InitGroupContainers()
                 end,
             })
 
+            -- 自定义组在 UIParent 上，需与 BuffIconCooldownViewer 共用「BUFF」显示条件
+            if VFlow.VisibilityControl and VFlow.VisibilityControl.RegisterFrame then
+                VFlow.VisibilityControl.RegisterFrame(container, "buffs")
+            end
+
             _groupContainers[i] = container
         end
+    end
+
+    if VFlow.VisibilityControl and VFlow.VisibilityControl.EvaluateAll then
+        VFlow.VisibilityControl.EvaluateAll()
     end
 end
 
