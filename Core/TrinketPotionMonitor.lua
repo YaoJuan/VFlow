@@ -6,6 +6,7 @@ local VFlow = _G.VFlow
 if not VFlow then return end
 
 local MODULE_KEY = "VFlow.Buffs"
+local MasqueSupport = VFlow.MasqueSupport
 
 -- =========================================================
 -- 模块状态
@@ -424,6 +425,9 @@ function RefreshLayout()
         if VFlow.StyleApply then
             VFlow.StyleApply.ApplyIconSize(frame, w, h)
             VFlow.StyleApply.ApplyButtonStyle(frame, config)
+        end
+        if MasqueSupport and MasqueSupport:IsActive() and frame.Icon then
+            MasqueSupport:RegisterButton(frame, frame.Icon)
         end
         frame:SetAlpha(1)
     end

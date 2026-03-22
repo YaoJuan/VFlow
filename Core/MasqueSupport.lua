@@ -34,7 +34,16 @@ function MasqueSupport:RegisterButton(button, icon, border)
         return
     end
 
+    -- 已注册时 Masque 的 AddButton 会直接 return，不会重算 Icon/Cooldown 等区域；
+    -- VFlow 改宽高后必须 ReSkin(按钮)，否则只有布局间距变、皮肤层仍按旧尺寸绘制。
     if self.registeredButtons[button] then
+        local w = button._vf_w or (button.GetWidth and button:GetWidth())
+        local h = button._vf_h or (button.GetHeight and button:GetHeight())
+        if w and h and (button._vf_masqueSkinnedW ~= w or button._vf_masqueSkinnedH ~= h) then
+            masqueGroup:ReSkin(button)
+            button._vf_masqueSkinnedW = w
+            button._vf_masqueSkinnedH = h
+        end
         return
     end
 
@@ -53,6 +62,8 @@ function MasqueSupport:RegisterButton(button, icon, border)
 
     masqueGroup:AddButton(button, buttonData)
     self.registeredButtons[button] = true
+    button._vf_masqueSkinnedW = button._vf_w or (button.GetWidth and button:GetWidth())
+    button._vf_masqueSkinnedH = button._vf_h or (button.GetHeight and button:GetHeight())
 end
 
 ---取消注册一个按钮
@@ -64,6 +75,8 @@ function MasqueSupport:UnregisterButton(button)
 
     masqueGroup:RemoveButton(button)
     self.registeredButtons[button] = nil
+    button._vf_masqueSkinnedW = nil
+    button._vf_masqueSkinnedH = nil
 end
 
 ---刷新所有已注册的按钮皮肤

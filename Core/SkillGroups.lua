@@ -7,6 +7,7 @@ if not VFlow then return end
 
 local MODULE_KEY = "VFlow.Skills"
 local Profiler = VFlow.Profiler
+local MasqueSupport = VFlow.MasqueSupport
 
 -- =========================================================
 -- 模块状态
@@ -329,6 +330,9 @@ local function LayoutSkillGroups(groupBuckets)
                                     VFlow.StyleApply.ApplyIconSize(button, wSnap, hSnap)
                                     VFlow.StyleApply.ApplyButtonStyle(button, cfg)
                                 end
+                                if MasqueSupport and MasqueSupport:IsActive() and button.Icon then
+                                    MasqueSupport:RegisterButton(button, button.Icon)
+                                end
 
                                 local x = x0 + (colIdx - 1) * strideX
                                 local y = -yAccum
@@ -378,6 +382,9 @@ local function LayoutSkillGroups(groupBuckets)
                                 if VFlow.StyleApply then
                                     VFlow.StyleApply.ApplyIconSize(button, w, h)
                                     VFlow.StyleApply.ApplyButtonStyle(button, cfg)
+                                end
+                                if MasqueSupport and MasqueSupport:IsActive() and button.Icon then
+                                    MasqueSupport:RegisterButton(button, button.Icon)
                                 end
 
                                 local x = xAccum

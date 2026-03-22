@@ -8,6 +8,7 @@ if not VFlow then return end
 local MODULE_KEY = "VFlow.Items"
 
 local Profiler = VFlow.Profiler
+local MasqueSupport = VFlow.MasqueSupport
 local EssentialCooldownViewer = _G.EssentialCooldownViewer
 local UtilityCooldownViewer = _G.UtilityCooldownViewer
 
@@ -784,6 +785,9 @@ local function LayoutStandaloneIconGrid(container, cfg, groupId, icons)
             if VFlow.StyleApply then
                 VFlow.StyleApply.ApplyIconSize(button, w, h)
                 VFlow.StyleApply.ApplyButtonStyle(button, cfg)
+            end
+            if MasqueSupport and MasqueSupport:IsActive() and button.Icon then
+                MasqueSupport:RegisterButton(button, button.Icon)
             end
 
             local x = startX + (colIdx - 1) * (w + spacingX)

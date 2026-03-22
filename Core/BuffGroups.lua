@@ -7,6 +7,7 @@ if not VFlow then return end
 
 local MODULE_KEY = "VFlow.Buffs"
 local Profiler = VFlow.Profiler
+local MasqueSupport = VFlow.MasqueSupport
 
 -- =========================================================
 -- 模块状态
@@ -284,6 +285,9 @@ local function LayoutBuffGroups(groupBuckets)
                     if VFlow.StyleApply then
                         VFlow.StyleApply.ApplyIconSize(icon, w, h)
                         VFlow.StyleApply.ApplyButtonStyle(icon, cfg)
+                    end
+                    if MasqueSupport and MasqueSupport:IsActive() and icon.Icon then
+                        MasqueSupport:RegisterButton(icon, icon.Icon)
                     end
                     icon:SetAlpha(1)
                     icon._vf_cdmKind = "buff"
