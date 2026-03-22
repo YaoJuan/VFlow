@@ -286,6 +286,7 @@ local function LayoutBuffGroups(groupBuckets)
                         VFlow.StyleApply.ApplyButtonStyle(icon, cfg)
                     end
                     icon:SetAlpha(1)
+                    icon._vf_cdmKind = "buff"
                 end
 
                 local isVertical = (cfg.vertical == true)
@@ -433,9 +434,23 @@ end
 -- 公共API
 -- =========================================================
 
+local function ForEachGroupIcon(callback)
+    if not callback then return end
+    for _, container in pairs(_groupContainers) do
+        if container and container.GetChildren then
+            for _, child in ipairs({ container:GetChildren() }) do
+                if child and child.Icon then
+                    callback(child)
+                end
+            end
+        end
+    end
+end
+
 VFlow.BuffGroups = {
     classifyIcons = ClassifyIcons,
     layoutBuffGroups = LayoutBuffGroups,
+    forEachGroupIcon = ForEachGroupIcon,
     isGroupFrame = function(icon)
         local spellMap = RebuildSpellMap()
         local idx = GetGroupIdxForIcon(icon, spellMap)

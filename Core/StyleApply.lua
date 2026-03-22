@@ -590,6 +590,8 @@ end
 
 local LCG = LibStub and LibStub("LibCustomGlow-1.0", true)
 local GLOW_KEY = "VFlow_Glow"
+-- 与系统 proc 替换发光（GLOW_KEY）分离，避免 HideAlert 时清掉自定义高亮
+local CUSTOM_GLOW_KEY = "VFlow_CustomHL"
 
 local glowCache = {
     type = "proc",
@@ -604,6 +606,7 @@ local glowCache = {
 }
 
 local activeGlowFrames = setmetatable({}, { __mode = "k" })
+local activeCustomGlowFrames = setmetatable({}, { __mode = "k" })
 
 local function GetGlowColor()
     if glowCache.useCustomColor and glowCache.color then
@@ -613,47 +616,54 @@ local function GetGlowColor()
     return nil
 end
 
-local glowStartFunctions, glowStopFunctions
+local function makeGlowStartFunctions(glowKey)
+    return {
+        pixel = function(frame, color, frameLevel)
+            if not LCG then return end
+            LCG.PixelGlow_Start(frame, color,
+                glowCache.pixelLines, glowCache.pixelFrequency,
+                glowCache.pixelLength, glowCache.pixelThickness,
+                glowCache.pixelXOffset, glowCache.pixelYOffset, false, glowKey, frameLevel)
+        end,
+        autocast = function(frame, color, frameLevel)
+            if not LCG then return end
+            LCG.AutoCastGlow_Start(frame, color,
+                glowCache.autocastParticles, glowCache.autocastFrequency,
+                glowCache.autocastScale,
+                glowCache.autocastXOffset, glowCache.autocastYOffset, glowKey, frameLevel)
+        end,
+        button = function(frame, color, frameLevel)
+            if not LCG then return end
+            LCG.ButtonGlow_Start(frame, color, glowCache.buttonFrequency, frameLevel)
+        end,
+        proc = function(frame, color, frameLevel)
+            if not LCG then return end
+            LCG.ProcGlow_Start(frame, {
+                color = color,
+                duration = glowCache.procDuration,
+                startAnim = false,
+                xOffset = glowCache.procXOffset,
+                yOffset = glowCache.procYOffset,
+                key = glowKey,
+                frameLevel = frameLevel,
+            })
+        end,
+    }
+end
 
-glowStartFunctions = {
-    pixel = function(frame, color, frameLevel)
-        if not LCG then return end
-        LCG.PixelGlow_Start(frame, color,
-            glowCache.pixelLines, glowCache.pixelFrequency,
-            glowCache.pixelLength, glowCache.pixelThickness,
-            glowCache.pixelXOffset, glowCache.pixelYOffset, false, GLOW_KEY, frameLevel)
-    end,
-    autocast = function(frame, color, frameLevel)
-        if not LCG then return end
-        LCG.AutoCastGlow_Start(frame, color,
-            glowCache.autocastParticles, glowCache.autocastFrequency,
-            glowCache.autocastScale,
-            glowCache.autocastXOffset, glowCache.autocastYOffset, GLOW_KEY, frameLevel)
-    end,
-    button = function(frame, color, frameLevel)
-        if not LCG then return end
-        LCG.ButtonGlow_Start(frame, color, glowCache.buttonFrequency, frameLevel)
-    end,
-    proc = function(frame, color, frameLevel)
-        if not LCG then return end
-        LCG.ProcGlow_Start(frame, {
-            color = color,
-            duration = glowCache.procDuration,
-            startAnim = false,
-            xOffset = glowCache.procXOffset,
-            yOffset = glowCache.procYOffset,
-            key = GLOW_KEY,
-            frameLevel = frameLevel,
-        })
-    end,
-}
+local function makeGlowStopFunctions(glowKey)
+    return {
+        pixel    = function(f) if LCG then LCG.PixelGlow_Stop(f, glowKey) end end,
+        autocast = function(f) if LCG then LCG.AutoCastGlow_Stop(f, glowKey) end end,
+        button   = function(f) if LCG then LCG.ButtonGlow_Stop(f) end end,
+        proc     = function(f) if LCG then LCG.ProcGlow_Stop(f, glowKey) end end,
+    }
+end
 
-glowStopFunctions = {
-    pixel    = function(f) if LCG then LCG.PixelGlow_Stop(f, GLOW_KEY) end end,
-    autocast = function(f) if LCG then LCG.AutoCastGlow_Stop(f, GLOW_KEY) end end,
-    button   = function(f) if LCG then LCG.ButtonGlow_Stop(f) end end,
-    proc     = function(f) if LCG then LCG.ProcGlow_Stop(f, GLOW_KEY) end end,
-}
+local glowStartFunctions = makeGlowStartFunctions(GLOW_KEY)
+local glowStopFunctions = makeGlowStopFunctions(GLOW_KEY)
+local customGlowStartFunctions = makeGlowStartFunctions(CUSTOM_GLOW_KEY)
+local customGlowStopFunctions = makeGlowStopFunctions(CUSTOM_GLOW_KEY)
 
 function StyleApply.ShowGlow(frame)
     if not frame or not LCG then return end
@@ -687,38 +697,75 @@ function StyleApply.RefreshActiveGlows()
     end
 end
 
+function StyleApply.ShowCustomGlow(frame)
+    if not frame or not LCG then return end
+    -- 已以当前发光类型显示则不再重复 Start，避免动画被不断重置
+    if frame._vf_customGlowActive and frame._vf_customGlowType == glowCache.type then
+        return
+    end
+    if frame._vf_customGlowActive then StyleApply.HideCustomGlow(frame) end
+    local color = GetGlowColor()
+    local startFn = customGlowStartFunctions[glowCache.type]
+    if startFn then
+        local frameLevel = frame:GetFrameLevel() + 5
+        startFn(frame, color, frameLevel)
+        frame._vf_customGlowActive = true
+        frame._vf_customGlowType = glowCache.type
+        activeCustomGlowFrames[frame] = true
+    end
+end
+
+function StyleApply.HideCustomGlow(frame)
+    if not frame or not frame._vf_customGlowActive then return end
+    local stopFn = customGlowStopFunctions[frame._vf_customGlowType]
+    if stopFn then stopFn(frame) end
+    frame._vf_customGlowActive = false
+    frame._vf_customGlowType = nil
+    activeCustomGlowFrames[frame] = nil
+end
+
+function StyleApply.RefreshActiveCustomGlows()
+    for frame in pairs(activeCustomGlowFrames) do
+        if frame._vf_customGlowActive then
+            StyleApply.HideCustomGlow(frame)
+            StyleApply.ShowCustomGlow(frame)
+        end
+    end
+end
+
 function StyleApply.RefreshGlowCache()
     local db = VFlow.Store and VFlow.Store.getModuleRef and VFlow.Store.getModuleRef("VFlow.StyleGlow")
-    if not db then return end
+    if db then
+        glowCache.type = db.glowType or "proc"
+        glowCache.useCustomColor = db.useCustomColor or false
+        glowCache.color = db.color
 
-    glowCache.type = db.glowType or "proc"
-    glowCache.useCustomColor = db.useCustomColor or false
-    glowCache.color = db.color
+        glowCache.pixelLines = db.pixelLines or 8
+        glowCache.pixelFrequency = db.pixelFrequency or 0.2
+        glowCache.pixelLength = db.pixelLength or 0
+        glowCache.pixelThickness = db.pixelThickness or 2
+        glowCache.pixelXOffset = db.pixelXOffset or 0
+        glowCache.pixelYOffset = db.pixelYOffset or 0
 
-    glowCache.pixelLines = db.pixelLines or 8
-    glowCache.pixelFrequency = db.pixelFrequency or 0.2
-    glowCache.pixelLength = db.pixelLength or 0
-    glowCache.pixelThickness = db.pixelThickness or 2
-    glowCache.pixelXOffset = db.pixelXOffset or 0
-    glowCache.pixelYOffset = db.pixelYOffset or 0
+        glowCache.autocastParticles = db.autocastParticles or 4
+        glowCache.autocastFrequency = db.autocastFrequency or 0.2
+        glowCache.autocastScale = db.autocastScale or 1
+        glowCache.autocastXOffset = db.autocastXOffset or 0
+        glowCache.autocastYOffset = db.autocastYOffset or 0
 
-    glowCache.autocastParticles = db.autocastParticles or 4
-    glowCache.autocastFrequency = db.autocastFrequency or 0.2
-    glowCache.autocastScale = db.autocastScale or 1
-    glowCache.autocastXOffset = db.autocastXOffset or 0
-    glowCache.autocastYOffset = db.autocastYOffset or 0
+        glowCache.buttonFrequency = db.buttonFrequency or 0
 
-    glowCache.buttonFrequency = db.buttonFrequency or 0
+        glowCache.procDuration = db.procDuration or 1
+        glowCache.procXOffset = db.procXOffset or 0
+        glowCache.procYOffset = db.procYOffset or 0
 
-    glowCache.procDuration = db.procDuration or 1
-    glowCache.procXOffset = db.procXOffset or 0
-    glowCache.procYOffset = db.procYOffset or 0
-
-    if not glowStartFunctions[glowCache.type] then
-        glowCache.type = "proc"
+        if not glowStartFunctions[glowCache.type] then
+            glowCache.type = "proc"
+        end
     end
 
     StyleApply.RefreshActiveGlows()
+    StyleApply.RefreshActiveCustomGlows()
 end
 
 local function HideBlizzardGlow(frame)

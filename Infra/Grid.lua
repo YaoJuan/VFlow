@@ -156,6 +156,14 @@ local function collectConditionalMeta(items, meta)
             if not hasDependsOn then
                 meta.hasUnknownConditional = true
             end
+        elseif (item.type == "description" or item.type == "interactiveText") and item.dependsOn then
+            meta.hasConditionalRender = true
+            local hasDependsOn = iterateDependsOn(item.dependsOn, function(key)
+                meta.conditionalWatchKeys[key] = true
+            end)
+            if not hasDependsOn then
+                meta.hasUnknownConditional = true
+            end
         elseif item.children then
             collectConditionalMeta(item.children, meta)
         end
@@ -284,7 +292,12 @@ local function createWidget(parent, item, config, moduleKey, configPath)
     elseif item.type == "subtitle" then
         widget = UI.subtitle(parent, item.text)
     elseif item.type == "description" then
-        widget = UI.description(parent, item.text)
+        local descText = item.text
+        if type(descText) == "function" then
+            local ok, out = pcall(descText, config)
+            descText = ok and out or ""
+        end
+        widget = UI.description(parent, descText or "")
     elseif item.type == "button" then
         widget = UI.button(parent, item.text, function()
             if item.onClick then
@@ -295,6 +308,9 @@ local function createWidget(parent, item, config, moduleKey, configPath)
         local value = getNestedValue(config, item.key)
         widget = UI.checkbox(parent, item.label, value, function(checked)
             onValueChanged(item.key, checked)
+            if item.onChange then
+                pcall(item.onChange, config, checked, item)
+            end
         end)
     elseif item.type == "slider" then
         local value = getNestedValue(config, item.key) or item.min
@@ -305,6 +321,9 @@ local function createWidget(parent, item, config, moduleKey, configPath)
         local value = getNestedValue(config, item.key) or ""
         widget = UI.input(parent, item.label, value, function(text)
             onValueChanged(item.key, text)
+            if item.onChange then
+                pcall(item.onChange, config, text, item)
+            end
         end, item)
 
         if widget.editBox then
@@ -353,7 +372,12 @@ local function createWidget(parent, item, config, moduleKey, configPath)
         end, item.tooltip, item.borderColor)
     elseif item.type == "interactiveText" then
         -- 可交互文本组件: { text = "文本{链接}", links = { ["链接"] = fn } }
-        widget = UI.interactiveText(parent, { text = item.text, links = item.links })
+        local itText = item.text
+        if type(itText) == "function" then
+            local ok, out = pcall(itText, config)
+            itText = ok and out or ""
+        end
+        widget = UI.interactiveText(parent, { text = itText or "", links = item.links })
     elseif item.type == "customRender" then
         -- 自定义渲染组件
         if item.render then
@@ -572,6 +596,10 @@ function Grid.render(parent, layout, config, moduleKey, configPath)
                                 originalOnClick(dataItem, index)
                             end
                         end
+                        if type(itemCopy.text) == "function" then
+                            local ok, out = pcall(itemCopy.text, dataItem, index)
+                            itemCopy.text = ok and out or ""
+                        end
 
                         -- 计算组件宽度
                         local cols = itemCopy.cols or item.cols or 24
@@ -707,6 +735,12 @@ function Grid.clear(parent)
 
     local cache = containerCache[target]
     if not cache then return end
+
+    -- 条件布局注册的 Store 监听会闭包引用本容器；不注销则旧面板无法回收且每次打开都会多一条监听
+    if cache.hasConditionalRender and cache.moduleKey and Store and Store.unwatch then
+        Store.unwatch(cache.moduleKey, "Grid_" .. tostring(target))
+    end
+    conditionalListenerRegistered[target] = nil
 
     local UI = VFlow.UI
 

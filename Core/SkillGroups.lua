@@ -326,6 +326,7 @@ local function LayoutSkillGroups(groupBuckets)
                                 button:ClearAllPoints()
                                 button:SetPoint("TOPLEFT", container, "TOPLEFT", x, y)
                                 button:SetAlpha(1)
+                                button._vf_cdmKind = "skill"
                             end
 
                             yAccum = yAccum + h + spacingY
@@ -375,6 +376,7 @@ local function LayoutSkillGroups(groupBuckets)
                                 button:ClearAllPoints()
                                 button:SetPoint("TOPLEFT", container, "TOPLEFT", x, y)
                                 button:SetAlpha(1)
+                                button._vf_cdmKind = "skill"
                             end
 
                             xAccum = xAccum + w + spacingX
@@ -393,9 +395,23 @@ end
 -- 公共API
 -- =========================================================
 
+local function ForEachGroupIcon(callback)
+    if not callback then return end
+    for _, container in pairs(_groupContainers) do
+        if container and container.GetChildren then
+            for _, child in ipairs({ container:GetChildren() }) do
+                if child and child.Icon then
+                    callback(child)
+                end
+            end
+        end
+    end
+end
+
 VFlow.SkillGroups = {
     classifyIcons = ClassifyIcons,
     layoutSkillGroups = LayoutSkillGroups,
+    forEachGroupIcon = ForEachGroupIcon,
 }
 
 -- =========================================================

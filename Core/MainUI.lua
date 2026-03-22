@@ -223,6 +223,16 @@ local menuItems = {
             -- 自定义物品组会动态添加
         }
     },
+    -- 其他功能
+    {
+        type = "category",
+        key = "other",
+        label = "其他功能",
+        children = {
+            { key = "other_tts", label = "自定义播报", module = "OtherFeatures" },
+            { key = "other_highlight", label = "自定义高亮", module = "OtherFeatures" },
+        }
+    },
     -- 资源条
     -- {
     --     type = "category",
@@ -811,6 +821,9 @@ showContent = function(menuKey, moduleName)
 
     -- 清空右侧内容
     if rightPanel.content then
+        if VFlow.Grid and VFlow.Grid.clear then
+            VFlow.Grid.clear(rightPanel.content)
+        end
         rightPanel.content:Hide()
         rightPanel.content:SetParent(nil)
     end

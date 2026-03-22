@@ -102,6 +102,299 @@ local function CollectBuffBarFrames(viewer)
     return frames
 end
 
+-- =========================================================
+-- 自定义高亮（VFlow.OtherFeatures.highlightRules，样式同 StyleGlow）
+-- 基于 CDM 帧与 Cooldown 子帧，避免依赖战斗中受限的法术 API
+-- =========================================================
+
+local OTHER_FEATURES_KEY = "VFlow.OtherFeatures"
+
+local function GetOtherFeaturesDB()
+    local store = VFlow.Store
+    if not store or not store.getModuleRef then return nil end
+    return store.getModuleRef(OTHER_FEATURES_KEY)
+end
+
+local function NormalizeOtherFeaturesHighlightSource(src)
+    if src == "buff" then return "buff" end
+    return "skill"
+end
+
+--- 当前正在设置页选中的法术：以 highlightForm 为准（运行时编辑态）；其余法术读持久化的 highlightRules
+local function GetOtherFeaturesHighlightRule(spellID)
+    if not spellID then return nil end
+    local db = GetOtherFeaturesDB()
+    if not db then return nil end
+    local form = db.highlightForm
+    local formSid = form and tonumber(form.spellId)
+    if formSid == spellID then
+        if not form.enabled then return nil end
+        return {
+            enabled = true,
+            source = NormalizeOtherFeaturesHighlightSource(form.source),
+        }
+    end
+    local rules = db.highlightRules
+    if not rules then return nil end
+    local r = rules[spellID] or rules[tostring(spellID)]
+    if type(r) ~= "table" or not r.enabled then return nil end
+    return r
+end
+
+--- 默认 true（与模块 defaults 一致）；仅当显式为 false 时脱战也高亮
+local function OtherFeaturesHighlightOnlyInCombat()
+    local db = GetOtherFeaturesDB()
+    if not db then return true end
+    return db.highlightOnlyInCombat ~= false
+end
+
+local function IsPlayerInCombatForCustomHighlight()
+    return UnitAffectingCombat and UnitAffectingCombat("player") == true
+end
+
+local function ResolveHighlightSpellID(frame)
+    if not frame then return nil end
+    if frame.GetSpellID then
+        local id = frame:GetSpellID()
+        if id and (not issecretvalue or not issecretvalue(id)) and type(id) == "number" and id > 0 then
+            return id
+        end
+    end
+    if frame.GetAuraSpellID then
+        local id = frame:GetAuraSpellID()
+        if id and (not issecretvalue or not issecretvalue(id)) and type(id) == "number" and id > 0 then
+            return id
+        end
+    end
+    local cdID = frame.cooldownID
+    if cdID and C_CooldownViewer and C_CooldownViewer.GetCooldownViewerCooldownInfo then
+        local info = C_CooldownViewer.GetCooldownViewerCooldownInfo(cdID)
+        if info then
+            local spellID = info.linkedSpellIDs and info.linkedSpellIDs[1]
+            spellID = spellID or info.overrideSpellID or info.spellID
+            if spellID and spellID > 0 then
+                return spellID
+            end
+        end
+    end
+    return nil
+end
+
+local function InferCdmKindFromParent(frame)
+    local p = frame and frame:GetParent()
+    if not p then return nil end
+    local n = p:GetName()
+    if n == "EssentialCooldownViewer" or n == "UtilityCooldownViewer" then return "skill" end
+    if n == "BuffIconCooldownViewer" or n == "BuffBarCooldownViewer" then return "buff" end
+    if n and n:match("^VFlow_SkillGroup_") then return "skill" end
+    if n and n:match("^VFlow_BuffGroup_") then return "buff" end
+    return nil
+end
+
+local function GetCdmFrameKind(frame)
+    if not frame then return nil end
+    if frame._vf_cdmKind == "skill" or frame._vf_cdmKind == "buff" then
+        return frame._vf_cdmKind
+    end
+    return InferCdmKindFromParent(frame)
+end
+
+local function HighlightRuleMatchesKind(rule, kind)
+    if not rule or not kind then return false end
+    local src = rule.source
+    if not src or src == "" then
+        return true
+    end
+    if src == "skill" then return kind == "skill" end
+    if src == "buff" then return kind == "buff" end
+    return false
+end
+
+-- 与 CustomMonitorRuntime / ItemGroups 一致：仅受 GCD 锁时仍视为「可用」
+local function SkillCooldownIsGcdOnly(spellID)
+    if not spellID or not C_Spell or not C_Spell.GetSpellCooldown then return false end
+    local ok, info = pcall(function() return C_Spell.GetSpellCooldown(spellID) end)
+    if not ok or type(info) ~= "table" then return false end
+    return info.isOnGCD == true
+end
+
+local function SkillIconAppearsReady(frame)
+    if not frame or not frame:IsShown() then return false end
+    local spellID = ResolveHighlightSpellID(frame)
+    if spellID and SkillCooldownIsGcdOnly(spellID) then
+        return true
+    end
+    local cd = frame.Cooldown
+    if not cd or not cd.IsShown or not cd:IsShown() then return true end
+    local ok, dur = pcall(function()
+        return cd.GetCooldownDuration and cd:GetCooldownDuration()
+    end)
+    if not ok or dur == nil then return false end
+    if type(dur) == "number" then
+        if issecretvalue and issecretvalue(dur) then return false end
+        return dur <= 0
+    end
+    return false
+end
+
+local function BuffIconAppearsActive(frame)
+    if not frame or not frame:IsShown() then return false end
+    local a = frame.GetAlpha and frame:GetAlpha()
+    if type(a) == "number" and a < 0.05 then return false end
+    return true
+end
+
+local function UpdateCustomHighlightForFrame(frame)
+    if not StyleApply or not StyleApply.ShowCustomGlow or not StyleApply.HideCustomGlow then return end
+    local kind = GetCdmFrameKind(frame)
+    local spellID = ResolveHighlightSpellID(frame)
+    local rule = spellID and GetOtherFeaturesHighlightRule(spellID)
+    local wantGlow = false
+    if rule and HighlightRuleMatchesKind(rule, kind) then
+        if kind == "skill" then
+            wantGlow = SkillIconAppearsReady(frame)
+        elseif kind == "buff" then
+            wantGlow = BuffIconAppearsActive(frame)
+        end
+    end
+    if wantGlow and OtherFeaturesHighlightOnlyInCombat() and not IsPlayerInCombatForCustomHighlight() then
+        wantGlow = false
+    end
+    if wantGlow then
+        StyleApply.ShowCustomGlow(frame)
+    else
+        StyleApply.HideCustomGlow(frame)
+    end
+end
+
+-- BUFF 激活瞬间会连续触发 CD 更新 / RefreshData / OnActiveStateChanged，合并到帧末只算一次，避免发光被反复打断
+local pendingCustomHLFrames = {}
+local customHLFlushFrame = CreateFrame("Frame")
+customHLFlushFrame:Hide()
+customHLFlushFrame:SetScript("OnUpdate", function(self)
+    self:Hide()
+    -- 单次刷新可能再次触发 CD hook 入队，同帧内多轮消化直到稳定（有上限防死循环）
+    for _ = 1, 12 do
+        local batch = pendingCustomHLFrames
+        if not next(batch) then break end
+        pendingCustomHLFrames = {}
+        for f in pairs(batch) do
+            if f and f.Icon then
+                UpdateCustomHighlightForFrame(f)
+            end
+        end
+    end
+end)
+
+local function ShouldDeferBuffCustomHighlightUpdate(frame)
+    if GetCdmFrameKind(frame) == "buff" then return true end
+    if InferCdmKindFromParent(frame) == "buff" then return true end
+    return false
+end
+
+local function RequestCustomHighlightUpdate(frame)
+    if not frame then return end
+    if ShouldDeferBuffCustomHighlightUpdate(frame) then
+        pendingCustomHLFrames[frame] = true
+        customHLFlushFrame:Show()
+    else
+        UpdateCustomHighlightForFrame(frame)
+    end
+end
+
+local function EnsureCustomHighlightHooks(frame)
+    if not frame or frame._vf_customHLHooked then return end
+    frame._vf_customHLHooked = true
+    local cd = frame.Cooldown
+    if cd and hooksecurefunc then
+        if cd.SetCooldown then
+            hooksecurefunc(cd, "SetCooldown", function()
+                RequestCustomHighlightUpdate(frame)
+            end)
+        end
+        if cd.SetCooldownFromDurationObject then
+            hooksecurefunc(cd, "SetCooldownFromDurationObject", function()
+                RequestCustomHighlightUpdate(frame)
+            end)
+        end
+        if cd.Clear then
+            hooksecurefunc(cd, "Clear", function()
+                RequestCustomHighlightUpdate(frame)
+            end)
+        end
+        if cd.HookScript then
+            cd:HookScript("OnCooldownDone", function()
+                RequestCustomHighlightUpdate(frame)
+            end)
+        end
+    end
+    if frame.HookScript then
+        frame:HookScript("OnShow", function(self)
+            RequestCustomHighlightUpdate(self)
+        end)
+        frame:HookScript("OnHide", function(self)
+            pendingCustomHLFrames[self] = nil
+            if StyleApply and StyleApply.HideCustomGlow then
+                StyleApply.HideCustomGlow(self)
+            end
+        end)
+    end
+end
+
+local function TouchCustomHighlight(frame)
+    if not frame or not frame.Icon then return end
+    EnsureCustomHighlightHooks(frame)
+    RequestCustomHighlightUpdate(frame)
+end
+
+local function ScanCooldownViewerIcons(viewer)
+    if not viewer then return end
+    local icons = StyleLayout.CollectIcons(viewer)
+    for i = 1, #icons do
+        TouchCustomHighlight(icons[i])
+    end
+end
+
+local function ScanSkillGroupCustomHighlights()
+    if VFlow.SkillGroups and VFlow.SkillGroups.forEachGroupIcon then
+        VFlow.SkillGroups.forEachGroupIcon(function(icon)
+            TouchCustomHighlight(icon)
+        end)
+    end
+end
+
+local function ScanBuffGroupCustomHighlights()
+    if VFlow.BuffGroups and VFlow.BuffGroups.forEachGroupIcon then
+        VFlow.BuffGroups.forEachGroupIcon(function(icon)
+            TouchCustomHighlight(icon)
+        end)
+    end
+end
+
+local function RefreshAllOtherFeatureHighlights()
+    ScanCooldownViewerIcons(_G.EssentialCooldownViewer)
+    ScanCooldownViewerIcons(_G.UtilityCooldownViewer)
+    ScanCooldownViewerIcons(_G.BuffIconCooldownViewer)
+    ScanSkillGroupCustomHighlights()
+    ScanBuffGroupCustomHighlights()
+    local bb = _G.BuffBarCooldownViewer
+    if bb then
+        local frames = CollectBuffBarFrames(bb)
+        for i = 1, #frames do
+            local f = frames[i]
+            f._vf_cdmKind = "buff"
+            TouchCustomHighlight(f)
+        end
+    end
+end
+
+VFlow.on("PLAYER_REGEN_ENABLED", "VFlow.CustomHL.OutOfCombat", function()
+    RefreshAllOtherFeatureHighlights()
+end)
+VFlow.on("PLAYER_REGEN_DISABLED", "VFlow.CustomHL.InCombat", function()
+    RefreshAllOtherFeatureHighlights()
+end)
+
 local function IsSafeEqual(v, expected)
     if type(v) == "number" and issecretvalue and issecretvalue(v) then
         return false
@@ -499,6 +792,8 @@ local function RefreshSkillViewer(viewer, cfg)
         if VFlow.ItemGroups and VFlow.ItemGroups.refreshStandaloneLayouts then
             VFlow.ItemGroups.refreshStandaloneLayouts()
         end
+        ScanCooldownViewerIcons(viewer)
+        ScanSkillGroupCustomHighlights()
         viewer._vf_refreshing = false
         Profiler.stop(_pt)
         return
@@ -657,6 +952,7 @@ local function RefreshSkillViewer(viewer, cfg)
                     if MasqueSupport and MasqueSupport:IsActive() then
                         MasqueSupport:RegisterButton(button, button.Icon)
                     end
+                    button._vf_cdmKind = "skill"
                 else
                     if button._vf_btnStyleVer ~= _buttonStyleVersion then
                         StyleApply.ApplyButtonStyle(button, cfg)
@@ -665,6 +961,7 @@ local function RefreshSkillViewer(viewer, cfg)
                     if MasqueSupport and MasqueSupport:IsActive() then
                         MasqueSupport:RegisterButton(button, button.Icon)
                     end
+                    button._vf_cdmKind = "skill"
                 end
             end
         end
@@ -695,6 +992,9 @@ local function RefreshSkillViewer(viewer, cfg)
     if VFlow.ItemGroups and VFlow.ItemGroups.refreshStandaloneLayouts then
         VFlow.ItemGroups.refreshStandaloneLayouts()
     end
+
+    ScanCooldownViewerIcons(viewer)
+    ScanSkillGroupCustomHighlights()
 
     viewer._vf_refreshing = false
     Profiler.stop(_pt)
@@ -941,6 +1241,8 @@ local function RefreshBuffViewer(viewer, cfg)
             MasqueSupport:RegisterButton(button, button.Icon)
         end
 
+        button._vf_cdmKind = "buff"
+
         -- 2. 再改父级（样式已稳定，不会再触发重渲染）
         if button:GetParent() ~= UIParent then
             button:SetParent(UIParent)
@@ -955,6 +1257,9 @@ local function RefreshBuffViewer(viewer, cfg)
     if VFlow.BuffGroups and VFlow.BuffGroups.layoutBuffGroups then
         VFlow.BuffGroups.layoutBuffGroups(groupBuckets)
     end
+
+    ScanCooldownViewerIcons(viewer)
+    ScanBuffGroupCustomHighlights()
 
     viewer._vf_refreshing = false
 
@@ -1099,6 +1404,14 @@ DoBuffBarRefresh = function(attempt)
     end
 
     local ok = RefreshBuffBarViewer(viewer, cfg)
+    if ok then
+        local frames = CollectBuffBarFrames(viewer)
+        for i = 1, #frames do
+            local f = frames[i]
+            f._vf_cdmKind = "buff"
+            TouchCustomHighlight(f)
+        end
+    end
     if not ok and (attempt or 0) < MAX_BUFFBAR_READY_RETRIES then
         C_Timer.After(0.05, function()
             DoBuffBarRefresh((attempt or 0) + 1)
@@ -1212,10 +1525,13 @@ SetupHooks = function()
     local provisionalPlaceAndQueue = function(frame)
         Profiler.count("CDS:provisionalPlaceAndQueue")
         if not frame then return end
+        frame._vf_cdmKind = "buff"
         local viewer, cfg = GetBuffViewerAndConfig()
         if not viewer or not cfg then return end
         -- 分组帧由BuffGroups自己管理，不走主组provisional逻辑
         if VFlow.BuffGroups and VFlow.BuffGroups.isGroupFrame and VFlow.BuffGroups.isGroupFrame(frame) then
+            frame._vf_cdmKind = "buff"
+            TouchCustomHighlight(frame)
             RequestBuffRefresh()
             return
         end
@@ -1223,6 +1539,7 @@ SetupHooks = function()
         StyleApply.ApplyButtonStyle(frame, cfg)
         frame._vf_btnStyleVer = _buttonStyleVersion
         ProvisionalPlaceBuffFrame(frame, viewer, cfg)
+        TouchCustomHighlight(frame)
         -- 合并同一帧内的多次刷新：OnUpdate 在当前帧末尾触发一次 DoBuffRefresh
         if not _pendingSyncRefresh then
             _pendingSyncRefresh = true
@@ -1276,6 +1593,26 @@ SetupHooks = function()
         enforceScaleOnViewer(UtilityCooldownViewer)
     end
 
+    local function HookSkillFrameForCustomHighlight(_, frame)
+        if not frame then return end
+        frame._vf_cdmKind = "skill"
+        if frame.OnCooldownIDSet and not frame._vf_skillCDHooked then
+            frame._vf_skillCDHooked = true
+            hooksecurefunc(frame, "OnCooldownIDSet", function(self)
+                TouchCustomHighlight(self)
+            end)
+        end
+        EnsureCustomHighlightHooks(frame)
+        TouchCustomHighlight(frame)
+    end
+
+    if EssentialCooldownViewer and EssentialCooldownViewer.OnAcquireItemFrame then
+        SafeHook(EssentialCooldownViewer, "OnAcquireItemFrame", HookSkillFrameForCustomHighlight)
+    end
+    if UtilityCooldownViewer and UtilityCooldownViewer.OnAcquireItemFrame then
+        SafeHook(UtilityCooldownViewer, "OnAcquireItemFrame", HookSkillFrameForCustomHighlight)
+    end
+
     if BuffIconCooldownViewer then
         SafeHook(BuffIconCooldownViewer, "RefreshLayout", buffHandler)
         SafeHook(BuffIconCooldownViewer, "RefreshData", buffHandler)
@@ -1302,6 +1639,8 @@ SetupHooks = function()
                     provisionalPlaceAndQueue(self)
                 end)
             end
+            frame._vf_cdmKind = "buff"
+            TouchCustomHighlight(frame)
             RequestBuffRefresh()
         end)
 
@@ -1455,6 +1794,16 @@ VFlow.Store.watch("VFlow.CustomMonitor", "CooldownStyle_CustomMonitor", function
     -- 只有hideInCooldownManager变化时才刷新
     if key:find("%.hideInCooldownManager$") then
         RequestRefresh(0)
+    end
+end)
+
+-- 其他功能：自定义高亮
+VFlow.Store.watch("VFlow.OtherFeatures", "CooldownStyle_OtherHL", function(key, _)
+    if not key then return end
+    if key == "highlightRules" or key:find("^highlightRules%.")
+        or key == "highlightOnlyInCombat"
+        or key == "highlightForm" or key:find("^highlightForm%.") then
+        C_Timer.After(0, RefreshAllOtherFeatureHighlights)
     end
 end)
 

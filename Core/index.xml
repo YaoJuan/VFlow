@@ -19,4 +19,5 @@
     <Script file="Core\CustomMonitorRuntime.lua"/>
     <Script file="Core\VisibilityControl.lua"/>
     <Script file="Core\Minimap.lua"/>
+    <Script file="Core\CustomTTS.lua"/>
 </Ui>
