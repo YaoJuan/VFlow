@@ -5,6 +5,7 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 -- =========================================================
 -- SECTION 2: Broker 与登录注册
@@ -14,7 +15,7 @@ local ldb = LibStub and LibStub("LibDataBroker-1.1", true)
 local icon = LibStub and LibStub("LibDBIcon-1.0", true)
 
 if not ldb or not icon then
-    print("|cffff8800VFlow警告:|r 缺少 LibDataBroker 或 LibDBIcon，无法创建小地图按钮")
+    print("|cffff8800VFlow:|r " .. (L and L["LibDataBroker or LibDBIcon missing, cannot create minimap button"] or "LibDataBroker or LibDBIcon missing"))
     return
 end
 
@@ -33,7 +34,7 @@ local broker = ldb:NewDataObject("VFlow", {
     end,
     OnTooltipShow = function(tooltip)
         tooltip:SetText("VFlow")
-        tooltip:AddLine("左键/右键点击: 打开/关闭主界面", 1, 1, 1)
+        tooltip:AddLine(L and L["Left/Right click: Open/Close main interface"] or "Left/Right click: Open/Close main interface", 1, 1, 1)
         tooltip:Show()
     end,
 })

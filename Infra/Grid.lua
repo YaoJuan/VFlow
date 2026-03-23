@@ -13,6 +13,7 @@ VFlow.Grid = Grid
 
 local UI = VFlow.UI
 local Store = VFlow.Store
+local L = VFlow.L
 
 -- 布局常量
 local TOTAL_COLS = 24
@@ -35,33 +36,37 @@ end
 -- =========================================================
 
 -- 位置选项（复用）
-local POSITION_ITEMS = {
-    { "左上", "TOPLEFT" }, { "上", "TOP" }, { "右上", "TOPRIGHT" },
-    { "左", "LEFT" }, { "中", "CENTER" }, { "右", "RIGHT" },
-    { "左下", "BOTTOMLEFT" }, { "下", "BOTTOM" }, { "右下", "BOTTOMRIGHT" },
-}
-local OUTLINE_ITEMS = {
-    { "描边", "OUTLINE" },
-    { "粗描边", "THICKOUTLINE" },
-    { "阴影", "SHADOW" },
-    { "无", "NONE" },
-}
+local function getPositionItems()
+    return {
+        { L["Top-left"], "TOPLEFT" }, { L["Top"], "TOP" }, { L["Top-right"], "TOPRIGHT" },
+        { L["Left"], "LEFT" }, { L["Center"], "CENTER" }, { L["Right"], "RIGHT" },
+        { L["Bottom-left"], "BOTTOMLEFT" }, { L["Bottom"], "BOTTOM" }, { L["Bottom-right"], "BOTTOMRIGHT" },
+    }
+end
+local function getOutlineItems()
+    return {
+        { L["Outline"], "OUTLINE" },
+        { L["Thick outline"], "THICKOUTLINE" },
+        { L["Shadow"], "SHADOW" },
+        { L["None"], "NONE" },
+    }
+end
 
 --- 展开字体设置组为布局项列表
 -- @param prefix string 配置前缀，如 "stackFont"
--- @param label string 显示标题，如 "堆叠文字"
+-- @param label string 显示标题（已本地化）
 -- @return table 布局项列表
 function Grid.fontGroup(prefix, label)
     return {
         { type = "subtitle", text = label, cols = 24 },
         { type = "separator", cols = 24 },
-        { type = "slider", key = prefix .. ".size", label = "字号", min = 8, max = 32, step = 1, cols = 8 },
-        { type = "slider", key = prefix .. ".offsetX", label = "X偏移", min = -50, max = 50, step = 1, cols = 8 },
-        { type = "slider", key = prefix .. ".offsetY", label = "Y偏移", min = -50, max = 50, step = 1, cols = 8 },
-        { type = "fontPicker", key = prefix .. ".font", label = "字体", cols = 8 },
-        { type = "colorPicker", key = prefix .. ".color", label = "颜色", hasAlpha = true, cols = 8 },
-        { type = "dropdown", key = prefix .. ".position", label = "位置", cols = 8, items = POSITION_ITEMS },
-        { type = "dropdown", key = prefix .. ".outline", label = "描边", cols = 8, items = OUTLINE_ITEMS },
+        { type = "slider", key = prefix .. ".size", label = L["Font size"], min = 8, max = 32, step = 1, cols = 8 },
+        { type = "slider", key = prefix .. ".offsetX", label = L["X offset"], min = -50, max = 50, step = 1, cols = 8 },
+        { type = "slider", key = prefix .. ".offsetY", label = L["Y offset"], min = -50, max = 50, step = 1, cols = 8 },
+        { type = "fontPicker", key = prefix .. ".font", label = L["Font"], cols = 8 },
+        { type = "colorPicker", key = prefix .. ".color", label = L["Color"], hasAlpha = true, cols = 8 },
+        { type = "dropdown", key = prefix .. ".position", label = L["Position"], cols = 8, items = getPositionItems },
+        { type = "dropdown", key = prefix .. ".outline", label = L["Outline"], cols = 8, items = getOutlineItems },
     }
 end
 

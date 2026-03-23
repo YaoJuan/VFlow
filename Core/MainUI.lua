@@ -5,6 +5,7 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 -- =========================================================
 -- SECTION 2: 主框架与菜单状态
@@ -160,78 +161,71 @@ end
 
 -- 菜单项定义
 local menuItems = {
-    -- 概览
     {
         type = "category",
         key = "overview",
-        label = "概览",
+        label = L["Overview"],
         children = {
-            { key = "general_home", label = "首页", module = "GeneralHome" },
-            { key = "overview_config", label = "配置", module = "GeneralConfig" },
+            { key = "general_home", label = L["Home"], module = "GeneralHome" },
+            { key = "overview_config", label = L["Config"], module = "GeneralConfig" },
         }
     },
-    -- 样式
     {
         type = "category",
         key = "style",
-        label = "样式",
+        label = L["Style"],
         children = {
-            { key = "style_icon", label = "图标", module = "StyleIcon" },
-            { key = "style_glow", label = "发光", module = "StyleGlow" },
-            { key = "style_display", label = "显示", module = "StyleDisplay" },
+            { key = "style_icon", label = L["Icon"], module = "StyleIcon" },
+            { key = "style_glow", label = L["Glow"], module = "StyleGlow" },
+            { key = "style_display", label = L["Display"], module = "StyleDisplay" },
         }
     },
-    -- 技能组
     {
         type = "category",
         key = "skills",
-        label = "技能",
+        label = L["Skills"],
         children = {
-            { key = "skill_important", label = "重要技能组", module = "Skills" },
-            { key = "skill_efficiency", label = "效能技能组", module = "Skills" },
+            { key = "skill_important", label = L["Important Skill Group"], module = "Skills" },
+            { key = "skill_efficiency", label = L["Efficiency Skill Group"], module = "Skills" },
             -- 自定义技能组会动态添加
         }
     },
-    -- BUFF组
     {
         type = "category",
         key = "buffs",
-        label = "BUFF",
+        label = L["BUFF"],
         children = {
-            { key = "buff_monitor", label = "主BUFF组", module = "Buffs" },
-            { key = "buff_bar", label = "BUFF条", module = "BuffBar" },
-            { key = "buff_trinket_potion", label = "饰品&药水", module = "Buffs" },
+            { key = "buff_monitor", label = L["Main BUFF Group"], module = "Buffs" },
+            { key = "buff_bar", label = L["BUFF Bar"], module = "BuffBar" },
+            { key = "buff_trinket_potion", label = L["Trinkets & Potions"], module = "Buffs" },
             -- 自定义BUFF组会动态添加
         }
     },
-    -- 自定义监控
     {
         type = "category",
         key = "custom",
-        label = "自定义图形监控",
+        label = L["Graphic Monitor"],
         children = {
-            { key = "custom_spell", label = "技能监控", module = "CustomMonitor" },
-            { key = "custom_buff", label = "BUFF监控", module = "CustomMonitor" },
+            { key = "custom_spell", label = L["Skill Monitor"], module = "CustomMonitor" },
+            { key = "custom_buff", label = L["BUFF Monitor"], module = "CustomMonitor" },
         }
     },
-    -- 额外CD监控（物品等）
     {
         type = "category",
         key = "items",
-        label = "额外CD监控",
+        label = L["Extra CD Monitor"],
         children = {
-            { key = "item_monitor", label = "主组", module = "Items" },
+            { key = "item_monitor", label = L["Main Group"], module = "Items" },
             -- 自定义物品组会动态添加
         }
     },
-    -- 其他功能
     {
         type = "category",
         key = "other",
-        label = "其他功能",
+        label = L["Other Features"],
         children = {
-            { key = "other_tts", label = "自定义播报", module = "OtherFeatures" },
-            { key = "other_highlight", label = "自定义高亮", module = "OtherFeatures" },
+            { key = "other_tts", label = L["Custom Announce"], module = "OtherFeatures" },
+            { key = "other_highlight", label = L["Custom Highlight"], module = "OtherFeatures" },
         }
     },
     -- 资源条
@@ -257,18 +251,18 @@ local showAddGroupInput
 local loadCustomGroups
 
 local STATIC_SKILL_CHILDREN = {
-    { key = "skill_important", label = "重要技能组", module = "Skills" },
-    { key = "skill_efficiency", label = "效能技能组", module = "Skills" },
+    { key = "skill_important", label = L["Important Skill Group"], module = "Skills" },
+    { key = "skill_efficiency", label = L["Efficiency Skill Group"], module = "Skills" },
 }
 
 local STATIC_BUFF_CHILDREN = {
-    { key = "buff_monitor", label = "主BUFF组", module = "Buffs" },
-    { key = "buff_bar", label = "BUFF条", module = "BuffBar" },
-    { key = "buff_trinket_potion", label = "饰品&药水", module = "Buffs" },
+    { key = "buff_monitor", label = L["Main BUFF Group"], module = "Buffs" },
+    { key = "buff_bar", label = L["BUFF Bar"], module = "BuffBar" },
+    { key = "buff_trinket_potion", label = L["Trinkets & Potions"], module = "Buffs" },
 }
 
 local STATIC_ITEM_CHILDREN = {
-    { key = "item_monitor", label = "主组", module = "Items" },
+    { key = "item_monitor", label = L["Main Group"], module = "Items" },
 }
 
 local function cloneChildren(items)
@@ -370,7 +364,7 @@ loadCustomGroups = function()
 
     if itemsIndex then
         menuItems[itemsIndex].children = {}
-        local mainLabel = "主组"
+        local mainLabel = L["Main Group"]
         if VFlow.getDBIfReady then
             local idb = VFlow.getDBIfReady("VFlow.Items")
             if idb and idb.mainGroup and type(idb.mainGroup.groupName) == "string" and idb.mainGroup.groupName ~= "" then
@@ -552,7 +546,7 @@ renderMenu = function()
                     deleteIcon:SetTexture("Interface\\AddOns\\VFlow\\Assets\\Icons\\delete")
                     deleteIcon:SetVertexColor(iconColor[1], iconColor[2], iconColor[3], 0.9)
                     deleteBtn:SetScript("OnClick", function()
-                        UI.dialog(UIParent, "删除分组", "删除后该分组配置将被移除，是否继续？", function()
+                        UI.dialog(UIParent, L["Delete group"], L["Delete group confirm"], function()
                             local groups = getCustomGroupsForCategory(category.key)
                             local moduleKey = nil
                             if category.key == "skills" then
@@ -595,8 +589,8 @@ renderMenu = function()
                             renderMenu()
                         end, nil, {
                             destructive = true,
-                            confirmText = "删除",
-                            cancelText = "取消",
+                            confirmText = L["Delete"],
+                            cancelText = L["Cancel"],
                             closeOnOutside = false,
                         })
                     end)
@@ -623,13 +617,13 @@ renderMenu = function()
 
                 local addText = addBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                 addText:SetPoint("LEFT", 46, 0)
-                local labelText = "新建"
+                local labelText = L["New"]
                 if category.key == "skills" then
-                    labelText = labelText .. "技能组"
+                    labelText = labelText .. L["Skill group"]
                 elseif category.key == "buffs" then
-                    labelText = labelText .. "BUFF组"
+                    labelText = labelText .. L["BUFF group"]
                 elseif category.key == "items" then
-                    labelText = labelText .. "子组"
+                    labelText = labelText .. L["Sub group"]
                 end
                 addText:SetText(labelText)
                 addText:SetTextColor(neutral[1], neutral[2], neutral[3], 0.6)
@@ -699,7 +693,7 @@ showAddGroupInput = function(btn, categoryKey, opts)
     placeholder:SetPoint("LEFT", editBox, "LEFT", 2, 0)
     placeholder:SetPoint("RIGHT", editBox, "RIGHT", -2, 0)
     placeholder:SetJustifyH("LEFT")
-    placeholder:SetText(isEdit and "请输入新组名" or "请输入组名")
+    placeholder:SetText(isEdit and L["Please enter new group name"] or L["Please enter group name"])
     local dim = getColor("textDim", { 0.7, 0.7, 0.7, 1 })
     placeholder:SetTextColor(dim[1], dim[2], dim[3], 0.85)
 
@@ -749,7 +743,7 @@ showAddGroupInput = function(btn, categoryKey, opts)
             updateMenuSelection()
         end
 
-        print("|cff00ff00VFlow:|r " .. (isEdit and "已更新分组:" or "已创建分组:"), groupName)
+        print("|cff00ff00VFlow:|r " .. (isEdit and L["Group updated:"] or L["Group created:"]), groupName)
     end
 
     editBox:SetScript("OnEnterPressed", confirmAdd)
@@ -845,7 +839,7 @@ showContent = function(menuKey, moduleName)
     local title = VFlow.UI.title(content, menuKey)
     title:SetPoint("TOPLEFT", 10, -10)
 
-    local desc = VFlow.UI.description(content, "模块 " .. (moduleName or "未知") .. "正在紧锣密鼓的开发中...")
+    local desc = VFlow.UI.description(content, string.format(L["Module %s is under development..."], moduleName or L["Unknown"]))
     desc:SetPoint("TOPLEFT", 10, -50)
 
 
@@ -925,9 +919,9 @@ local function createMainFrame()
         self:SetBackdropColor(hover[1], hover[2], hover[3], hover[4])
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
         if VFlow.State.systemEditMode then
-            GameTooltip:SetText("关闭系统编辑模式")
+            GameTooltip:SetText(L["Close system edit mode"])
         else
-            GameTooltip:SetText("开启系统编辑模式")
+            GameTooltip:SetText(L["Open system edit mode"])
         end
         GameTooltip:Show()
     end)
@@ -954,9 +948,9 @@ local function createMainFrame()
         self:SetBackdropColor(hover[1], hover[2], hover[3], hover[4])
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
         if VFlow.DragFrame and VFlow.DragFrame.isInternalEditMode and VFlow.DragFrame.isInternalEditMode() then
-            GameTooltip:SetText("关闭内部编辑模式")
+            GameTooltip:SetText(L["Close internal edit mode"])
         else
-            GameTooltip:SetText("开启内部编辑模式")
+            GameTooltip:SetText(L["Open internal edit mode"])
         end
         GameTooltip:Show()
     end)
@@ -985,7 +979,7 @@ local function createMainFrame()
         local hover = getColor("hover", { 0.22, 0.22, 0.22, 1 })
         self:SetBackdropColor(hover[1], hover[2], hover[3], hover[4])
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("冷却管理器")
+        GameTooltip:SetText(L["Cooldown Manager"])
         GameTooltip:Show()
     end)
     cdManagerBtn:SetScript("OnLeave", function(self)
@@ -1114,7 +1108,7 @@ VFlow.MainUI = {
     show = function()
         if VFlow.State.inCombat then
             pendingShowAfterCombat = true
-            print("|cff00ff00VFlow:|r 战斗中无法打开设置，将在战斗结束后自动打开")
+            print("|cff00ff00VFlow:|r " .. L["Cannot open settings in combat, will open after combat ends"])
             return
         end
         createMainFrame()
@@ -1130,10 +1124,10 @@ VFlow.MainUI = {
         if VFlow.State.inCombat then
             if pendingShowAfterCombat then
                 pendingShowAfterCombat = false
-                print("|cff00ff00VFlow:|r 已取消战斗结束后自动打开")
+                print("|cff00ff00VFlow:|r " .. L["Cancelled auto open after combat"])
             else
                 pendingShowAfterCombat = true
-                print("|cff00ff00VFlow:|r 战斗中无法打开设置，将在战斗结束后自动打开")
+                print("|cff00ff00VFlow:|r " .. L["Cannot open settings in combat, will open after combat ends"])
             end
             return
         end
@@ -1147,7 +1141,7 @@ VFlow.MainUI = {
     openMenu = function(menuKey)
         if VFlow.State.inCombat then
             pendingShowAfterCombat = true
-            print("|cff00ff00VFlow:|r 战斗中无法打开设置，将在战斗结束后自动打开")
+            print("|cff00ff00VFlow:|r " .. L["Cannot open settings in combat, will open after combat ends"])
             return
         end
         createMainFrame()
@@ -1196,24 +1190,24 @@ SlashCmdList["VFLOWUI"] = function(msg)
         if VFlow.Store and VFlow.Store.resetAll then
             cleared = VFlow.Store.resetAll()
         end
-        print("|cff00ff00VFlow:|r 已清空所有配置，共", cleared, "个模块")
-        print("|cff00ff00VFlow:|r 请输入 /reload 使重置立即生效")
+        print("|cff00ff00VFlow:|r " .. string.format(L["Cleared all config, %d modules"], cleared))
+        print("|cff00ff00VFlow:|r " .. L["Enter /reload for reset to take effect"])
     elseif msg == "pool stats" then
         VFlow.Pool.debugAll()
     elseif msg == "pool reset" then
-        print("|cff00ff00VFlow:|r 重置所有帧池...")
+        print("|cff00ff00VFlow:|r " .. L["Resetting all frame pools..."])
         for _, poolName in ipairs({ "VFlowContainer", "VFlowSlider", "VFlowCheckbox", "VFlowInput", "VFlowDropdown", "VFlowSeparator", "VFlowSpacer" }) do
             VFlow.Pool.releaseAll(poolName)
         end
-        print("|cff00ff00VFlow:|r 帧池已重置")
+        print("|cff00ff00VFlow:|r " .. L["Frame pools reset"])
     else
-        print("|cff00ff00VFlow命令:|r")
-        print("  /vflow - 打开主界面")
-        print("  /vflow hide - 隐藏主界面")
-        print("  /vflow toggle - 切换主界面显示")
-        print("  /vflow reset - 清空所有配置")
-        print("  /vflow pool stats - 显示帧池统计")
-        print("  /vflow pool reset - 重置所有帧池")
+        print("|cff00ff00VFlow:|r")
+        print("  /vflow - " .. L["Open main UI"])
+        print("  /vflow hide - " .. L["Hide main UI"])
+        print("  /vflow toggle - " .. L["Toggle main UI"])
+        print("  /vflow reset - " .. L["Clear all config"])
+        print("  /vflow pool stats - " .. L["Show frame pool stats"])
+        print("  /vflow pool reset - " .. L["Reset frame pools"])
     end
 end
 
@@ -1243,5 +1237,5 @@ VFlow.on("PLAYER_ENTERING_WORLD", "VFlow.MainUI", function()
         end
     end
 
-    print("|cff00ff00VFlow:|r 输入 /vflow 打开主界面")
+    print("|cff00ff00VFlow:|r " .. L["Type /vflow to open main UI"])
 end)

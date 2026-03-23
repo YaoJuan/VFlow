@@ -12,12 +12,13 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.Items"
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "额外CD监控",
-    description = "物品与额外冷却追踪",
+    name = L["Extra CD Monitor"],
+    description = L["Item and extra cooldown tracking"],
 })
 
 -- =========================================================
@@ -32,37 +33,36 @@ local UI_LIMITS = {
 }
 
 local DISPLAY_MODE_OPTIONS = {
-    { "单独分组", "standalone" },
-    { "追加到重要技能", "append_important" },
-    { "追加到效能技能", "append_efficiency" },
+    { L["Standalone"], "standalone" },
+    { L["Append to Important Skills"], "append_important" },
+    { L["Append to Efficiency Skills"], "append_efficiency" },
 }
 
 local ANCHOR_FRAME_OPTIONS = {
-    { "玩家框体", "player" },
-    { "UI父框体", "uiparent" },
+    { L["Player frame"], "player" },
+    { L["UI parent"], "uiparent" },
 }
 
 local PLAYER_ANCHOR_POSITION_OPTIONS = {
-    { "左上", "TOPLEFT" },
-    { "右上", "TOPRIGHT" },
-    { "左下", "BOTTOMLEFT" },
-    { "右下", "BOTTOMRIGHT" },
+    { L["Top-left"], "TOPLEFT" },
+    { L["Top-right"], "TOPRIGHT" },
+    { L["Bottom-left"], "BOTTOMLEFT" },
+    { L["Bottom-right"], "BOTTOMRIGHT" },
 }
 
 local APPEND_ROW_OPTIONS = {
-    { "第一行", 1 },
-    { "第二行", 2 },
+    { L["Row 1"], 1 },
+    { L["Row 2"], 2 },
 }
 
 local APPEND_SIDE_OPTIONS = {
-    { "起点", "start" },
-    { "终点", "end" },
+    { L["Start"], "start" },
+    { L["End"], "end" },
 }
 
---- 物品在背包/装备位上不可用时（数量为 0 或未装备）
 local ITEM_ZERO_COUNT_OPTIONS = {
-    { "变灰", "gray" },
-    { "隐藏", "hide" },
+    { L["Gray out"], "gray" },
+    { L["Hide"], "hide" },
 }
 
 -- =========================================================
@@ -82,7 +82,7 @@ local function getDefaultGroupConfig(anchorFrame, forCustomGroup)
     local autoDetect = forCustomGroup ~= true
     return {
         _dataVersion = 0,
-        groupName = "主组",
+        groupName = L["Main Group"],
         enabled = true,
         displayMode = "standalone",
         anchorFrame = anchorFrame or "player",
@@ -193,7 +193,7 @@ local function getCurrentItems(groupConfig)
                     id = itemID,
                     spellID = useSpellID,
                     slot = e.slot,
-                    name = itemName or ("饰品槽 " .. e.slot),
+                    name = itemName or string.format(L["Trinket slot %s"], e.slot),
                     icon = itemIcon or 134400,
                     isAuto = true,
                     orderIndex = idx,
@@ -207,7 +207,7 @@ local function getCurrentItems(groupConfig)
             table.insert(items, {
                 type = "spell",
                 id = e.id,
-                name = name or ("技能 " .. e.id),
+                name = name or string.format(L["Spell %s"], e.id),
                 icon = icon or 134400,
                 isAuto = true,
                 orderIndex = idx,
@@ -229,7 +229,7 @@ local function getCurrentItems(groupConfig)
                 type = "item",
                 id = configId,
                 displayItemId = (displayId ~= configId) and displayId or nil,
-                name = itemName or ("物品 " .. configId),
+                name = itemName or string.format(L["Item %s"], configId),
                 icon = itemIcon or 134400,
                 isAuto = false,
                 orderIndex = idx,
@@ -241,7 +241,7 @@ local function getCurrentItems(groupConfig)
             table.insert(items, {
                 type = "spell",
                 id = e.id,
-                name = name or ("技能 " .. e.id),
+                name = name or string.format(L["Spell %s"], e.id),
                 icon = icon or 134400,
                 isAuto = false,
                 orderIndex = idx,
@@ -262,47 +262,47 @@ local mergeLayouts = Utils.mergeLayouts
 local function buildItemSpellSelector(groupConfig, options)
     local configPath = options.isCustom and ("customGroups." .. options.groupIndex .. ".config") or "mainGroup"
     return {
-        { type = "subtitle", text = "物品/技能选择", cols = 24 },
+        { type = "subtitle", text = L["Item/Skill Selection"], cols = 24 },
         { type = "separator", cols = 24 },
 
         {
             type = "interactiveText",
             cols = 24,
-            text = "可在{编辑模式}中预览和拖拽修改位置",
+            text = L["Preview and drag in {Edit mode} to change position"],
             links = {
-                ["编辑模式"] = function()
+                [L["Edit mode"]] = function()
                     VFlow.toggleSystemEditMode()
                 end,
             }
         },
         { type = "spacer", height = 2, cols = 24 },
 
-        { type = "checkbox", key = "autoTrinkets", label = "自动识别主动饰品（槽位13/14）", cols = 12 },
-        { type = "checkbox", key = "autoRacialAbility", label = "自动识别种族技能", cols = 12 },
+        { type = "checkbox", key = "autoTrinkets", label = L["Auto-detect trinkets (slot 13/14)"], cols = 12 },
+        { type = "checkbox", key = "autoRacialAbility", label = L["Auto-detect racial ability"], cols = 12 },
         { type = "spacer", height = 10, cols = 24 },
 
-        { type = "description", text = "手动添加物品或技能:", cols = 24 },
+        { type = "description", text = L["Manual add item or skill:"], cols = 24 },
         { type = "spacer", height = 5, cols = 24 },
-        { type = "input", key = "_inputItemID", label = "物品ID", cols = 6, numeric = true, labelOnLeft = true },
+        { type = "input", key = "_inputItemID", label = L["Item ID"], cols = 6, numeric = true, labelOnLeft = true },
         {
             type = "button",
-            text = "添加物品",
+            text = L["Add item"],
             cols = 3,
             onClick = function(cfg)
                 local itemIDText = cfg._inputItemID or ""
                 if itemIDText == "" then
-                    print("|cffff0000VFlow:|r 请输入物品ID")
+                    print("|cffff0000VFlow:|r " .. L["Please enter item ID"])
                     return
                 end
 
                 local itemID = tonumber(itemIDText)
                 if not itemID then
-                    print("|cffff0000VFlow:|r 无效的物品ID")
+                    print("|cffff0000VFlow:|r " .. L["Invalid item ID"])
                     return
                 end
 
                 if cfg.itemIDs[itemID] then
-                    print("|cffff0000VFlow:|r 该物品已添加")
+                    print("|cffff0000VFlow:|r " .. L["Item already added"])
                     return
                 end
 
@@ -314,30 +314,30 @@ local function buildItemSpellSelector(groupConfig, options)
                 VFlow.Store.set(MODULE_KEY, configPath .. ".entryOrder", cfg.entryOrder)
                 cfg._inputItemID = ""
                 VFlow.Store.set(MODULE_KEY, configPath .. "._inputItemID", "")
-                print("|cff00ff00VFlow:|r 已添加物品 " .. itemID)
+                print("|cff00ff00VFlow:|r " .. string.format(L["Added item %d"], itemID))
             end,
         },
         { type = "spacer", cols = 2 },
-        { type = "input", key = "_inputSpellID", label = "技能ID", cols = 6, numeric = true, labelOnLeft = true },
+        { type = "input", key = "_inputSpellID", label = L["Spell ID"], cols = 6, numeric = true, labelOnLeft = true },
         {
             type = "button",
-            text = "添加技能",
+            text = L["Add spell"],
             cols = 3,
             onClick = function(cfg)
                 local spellIDText = cfg._inputSpellID or ""
                 if spellIDText == "" then
-                    print("|cffff0000VFlow:|r 请输入技能ID")
+                    print("|cffff0000VFlow:|r " .. L["Please enter spell ID"])
                     return
                 end
 
                 local spellID = tonumber(spellIDText)
                 if not spellID then
-                    print("|cffff0000VFlow:|r 无效的技能ID")
+                    print("|cffff0000VFlow:|r " .. L["Invalid spell ID"])
                     return
                 end
 
                 if cfg.spellIDs[spellID] then
-                    print("|cffff0000VFlow:|r 该技能已添加")
+                    print("|cffff0000VFlow:|r " .. L["Spell already added"])
                     return
                 end
 
@@ -349,14 +349,14 @@ local function buildItemSpellSelector(groupConfig, options)
                 VFlow.Store.set(MODULE_KEY, configPath .. ".entryOrder", cfg.entryOrder)
                 cfg._inputSpellID = ""
                 VFlow.Store.set(MODULE_KEY, configPath .. "._inputSpellID", "")
-                print("|cff00ff00VFlow:|r 已添加技能 " .. spellID)
+                print("|cff00ff00VFlow:|r " .. string.format(L["Added spell %d"], spellID))
             end,
         },
 
         { type = "spacer", height = 10, cols = 24 },
         {
             type = "description",
-            text = "先后点两个交换顺序，shift+点击可移除；自动项关闭开关可隐藏。",
+            text = L["Click two in sequence to swap; Shift+click to remove; Toggle auto items to hide."],
             cols = 24,
         },
         { type = "spacer", height = 5, cols = 24 },
@@ -409,18 +409,18 @@ local function buildItemSpellSelector(groupConfig, options)
                             tooltip:SetText(itemData.name or "", 1, 1, 1)
                         end
                         tooltip:AddLine(" ")
-                        tooltip:AddLine("|cffaaaaaa左键：先后点两个图标交换顺序|r", 1, 1, 1)
+                        tooltip:AddLine("|cffaaaaaa" .. L["Left click: click two icons in sequence to swap order"] .. "|r", 1, 1, 1)
                         if itemData.isAuto then
-                            tooltip:AddLine("|cff808080自动项：关闭对应开关可隐藏；不可 Shift 删除|r", 1, 1, 1)
+                            tooltip:AddLine("|cff808080" .. L["Auto item: disable corresponding switch to hide; cannot Shift delete"] .. "|r", 1, 1, 1)
                         else
-                            tooltip:AddLine("|cffff0000Shift+左键：从监控中移除|r", 1, 1, 1)
+                            tooltip:AddLine("|cffff0000" .. L["Shift+Left click: remove from monitor"] .. "|r", 1, 1, 1)
                         end
                     end
                 end,
                 onClick = function(itemData)
                     if IsShiftKeyDown() then
                         if itemData.isAuto then
-                            print("|cffff0000VFlow:|r 自动项请关闭「自动识别」开关；不可在此删除")
+                            print("|cffff0000VFlow:|r " .. L["Auto item: disable auto-detect switch; cannot delete here"])
                             return
                         end
                         if itemData.type == "item" then
@@ -494,13 +494,13 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
 
         -- 基础设置
         {
-            { type = "subtitle", text = "基础设置", cols = 24 },
+            { type = "subtitle", text = L["Base Settings"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "checkbox", key = "enabled", label = "启用", cols = 12 },
+            { type = "checkbox", key = "enabled", label = L["Enable"], cols = 12 },
             {
                 type = "dropdown",
                 key = "itemZeroCountBehavior",
-                label = "物品不可用（数量0或未装备）时",
+                label = L["When item unavailable (count 0 or not equipped)"],
                 cols = 12,
                 items = ITEM_ZERO_COUNT_OPTIONS,
             }
@@ -512,12 +512,12 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
         -- 显示模式
         {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "显示模式", cols = 24 },
+            { type = "subtitle", text = L["Display mode"], cols = 24 },
             { type = "separator", cols = 24 },
             {
                 type = "dropdown",
                 key = "displayMode",
-                label = "显示模式",
+                label = L["Display mode"],
                 cols = 12,
                 items = DISPLAY_MODE_OPTIONS
             },
@@ -536,20 +536,20 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                     {
                         type = "dropdown",
                         key = "appendTargetRow",
-                        label = "追加到第几行",
+                        label = L["Which row to append to"],
                         cols = 12,
                         items = APPEND_ROW_OPTIONS,
                     },
                     {
                         type = "dropdown",
                         key = "appendSide",
-                        label = "追加位置",
+                        label = L["Append position"],
                         cols = 12,
                         items = APPEND_SIDE_OPTIONS,
                     },
                     {
                         type = "description",
-                        text = "追加到技能条时，图标尺寸/层数/冷却读秒/遮罩等样式与对应技能组（重要技能或效能技能）一致，请在「技能监控」中调整。",
+                        text = L["When appending to skill bar, icon size/stack/cooldown/mask style follow the skill group. Adjust in Skill Monitor."],
                         cols = 24,
                     },
                 }
@@ -564,12 +564,12 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                 condition = function(cfg) return cfg.displayMode == "standalone" end,
                 children = {
                     { type = "spacer", height = 10, cols = 24 },
-                    { type = "subtitle", text = "依附框体", cols = 24 },
+                    { type = "subtitle", text = L["Attached frame"], cols = 24 },
                     { type = "separator", cols = 24 },
                     {
                         type = "dropdown",
                         key = "anchorFrame",
-                        label = "依附框体",
+                        label = L["Attached frame"],
                         cols = 12,
                         items = ANCHOR_FRAME_OPTIONS
                     },
@@ -587,13 +587,13 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                     {
                         type = "dropdown",
                         key = "playerAnchorPosition",
-                        label = "位置",
+                        label = L["Position"],
                         cols = 12,
                         items = PLAYER_ANCHOR_POSITION_OPTIONS
                     },
-                    { type = "slider", key = "x", label = "X偏移",
+                    { type = "slider", key = "x", label = L["X offset"],
                       min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
-                    { type = "slider", key = "y", label = "Y偏移",
+                    { type = "slider", key = "y", label = L["Y offset"],
                       min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
                 }
             },
@@ -606,9 +606,9 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                 dependsOn = { "displayMode", "anchorFrame" },
                 condition = function(cfg) return cfg.displayMode == "standalone" and cfg.anchorFrame == "uiparent" end,
                 children = {
-                    { type = "slider", key = "x", label = "X坐标",
+                    { type = "slider", key = "x", label = L["X coordinate"],
                       min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
-                    { type = "slider", key = "y", label = "Y坐标",
+                    { type = "slider", key = "y", label = L["Y coordinate"],
                       min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
                 }
             },
@@ -624,17 +624,17 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                 end,
                 children = {
                     { type = "spacer", height = 10, cols = 24 },
-                    { type = "subtitle", text = "样式设置", cols = 24 },
+                    { type = "subtitle", text = L["Style settings"], cols = 24 },
                     { type = "separator", cols = 24 },
-                    { type = "slider", key = "width", label = "图标宽度",
+                    { type = "slider", key = "width", label = L["Icon width"],
                       min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
-                    { type = "slider", key = "height", label = "图标高度",
+                    { type = "slider", key = "height", label = L["Icon height"],
                       min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
-                    { type = "slider", key = "maxIconsPerRow", label = "每行最大图标数",
+                    { type = "slider", key = "maxIconsPerRow", label = L["Max icons per row"],
                       min = UI_LIMITS.MAX_ICONS_PER_ROW.min, max = UI_LIMITS.MAX_ICONS_PER_ROW.max, step = 1, cols = 12 },
-                    { type = "slider", key = "spacingX", label = "列间距",
+                    { type = "slider", key = "spacingX", label = L["Column spacing"],
                       min = UI_LIMITS.SPACING.min, max = UI_LIMITS.SPACING.max, step = 1, cols = 12 },
-                    { type = "slider", key = "spacingY", label = "行间距",
+                    { type = "slider", key = "spacingY", label = L["Row spacing"],
                       min = UI_LIMITS.SPACING.min, max = UI_LIMITS.SPACING.max, step = 1, cols = 12 },
                 }
             },
@@ -651,15 +651,15 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                 children = mergeLayouts(
                     {
                         { type = "spacer", height = 10, cols = 24 },
-                        { type = "description", text = "层数文字用于物品堆叠数量（大于 1 时显示）", cols = 24 },
-                        { type = "checkbox", key = "showItemCount", label = "显示物品堆叠数量", cols = 12 },
+                        { type = "description", text = L["Stack text for item count (when > 1)"], cols = 24 },
+                        { type = "checkbox", key = "showItemCount", label = L["Show item stack count"], cols = 12 },
                         { type = "spacer", height = 6, cols = 24 },
                     },
-                    Grid.fontGroup("stackFont", "层数文字字体"),
+                    Grid.fontGroup("stackFont", L["Stack font"]),
                     {
                         { type = "spacer", height = 10, cols = 24 },
                     },
-                    Grid.fontGroup("cooldownFont", "冷却读秒字体")
+                    Grid.fontGroup("cooldownFont", L["Cooldown countdown font"])
                 )
             },
         },
@@ -674,9 +674,9 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                 end,
                 children = {
                     { type = "spacer", height = 10, cols = 24 },
-                    { type = "subtitle", text = "遮罩层配置", cols = 24 },
+                    { type = "subtitle", text = L["Mask Config"], cols = 24 },
                     { type = "separator", cols = 24 },
-                    { type = "colorPicker", key = "cooldownMaskColor", label = "冷却遮罩层颜色", hasAlpha = true, cols = 12 },
+                    { type = "colorPicker", key = "cooldownMaskColor", label = L["Cooldown mask color"], hasAlpha = true, cols = 12 },
                 }
             },
         }
@@ -689,7 +689,7 @@ local function renderContent(container, menuKey)
     -- reset 后同会话内需再跑一遍；已 seeded 则立即返回
     applyMainGroupStarterItemsOnce(db)
     if menuKey == "item_monitor" then
-        renderGroupConfig(container, db.mainGroup, db.mainGroup.groupName or "主组", {
+        renderGroupConfig(container, db.mainGroup, db.mainGroup.groupName or L["Main Group"], {
             isCustom = false
         })
     elseif menuKey:find("^item_custom_") then
@@ -701,7 +701,7 @@ local function renderContent(container, menuKey)
                 groupIndex = customIndex,
             })
         else
-            local title = VFlow.UI.title(container, "自定义物品组未找到")
+            local title = VFlow.UI.title(container, L["Custom item group not found"])
             title:SetPoint("TOPLEFT", 10, -10)
         end
     end

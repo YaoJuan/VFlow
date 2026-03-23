@@ -1,5 +1,8 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
 
+    <!-- 多语言 -->
+    <Include file="Locales\index.xml" />
+
     <!-- 基建层 -->
     <Include file="Infra\index.xml" />
 

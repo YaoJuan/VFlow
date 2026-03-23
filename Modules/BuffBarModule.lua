@@ -9,12 +9,13 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.BuffBar"
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "BUFF条",
-    description = "BUFF条形配置",
+    name = L["BUFF Bar"],
+    description = L["BUFF bar configuration"],
 })
 
 -- =========================================================
@@ -73,49 +74,49 @@ local function renderContent(container, _menuKey)
     local Grid = VFlow.Grid
 
     local layout = {
-        { type = "title", text = "BUFF条", cols = 24 },
+        { type = "title", text = L["BUFF Bar"], cols = 24 },
         { type = "separator", cols = 24 },
         {
             type = "interactiveText",
             cols = 24,
-            text = "BUFF条显示{冷却管理器}增益分类中追踪的状态栏内容，定制化的条形监控推荐使用自定义图形监控。",
+            text = L["BUFF bar displays status bar content tracked in {Cooldown Manager} Buff category. For custom bar monitors, use Graphic Monitor."],
             links = {
-                ["冷却管理器"] = function()
+                [L["Cooldown Manager"]] = function()
                     VFlow.openCooldownManager()
                 end,
             }
         },
         { type = "spacer", height = 6, cols = 24 },
 
-        { type = "subtitle", text = "显示", cols = 24 },
+        { type = "subtitle", text = L["Display"], cols = 24 },
         { type = "separator", cols = 24 },
-        { type = "checkbox", key = "showName", label = "显示BUFF名称", cols = 12 },
-        { type = "checkbox", key = "showDuration", label = "显示持续时间", cols = 12 },
-        { type = "checkbox", key = "showStack", label = "显示层数", cols = 12 },
+        { type = "checkbox", key = "showName", label = L["Show BUFF name"], cols = 12 },
+        { type = "checkbox", key = "showDuration", label = L["Show duration"], cols = 12 },
+        { type = "checkbox", key = "showStack", label = L["Show stack"], cols = 12 },
         { type = "spacer", height = 10, cols = 24 },
 
-        { type = "subtitle", text = "布局", cols = 24 },
+        { type = "subtitle", text = L["Layout"], cols = 24 },
         { type = "separator", cols = 24 },
         {
             type = "dropdown",
             key = "growDirection",
-            label = "生长方向",
+            label = L["Grow direction"],
             cols = 12,
             items = {
-                { "向下增长", "DOWN" },
-                { "向上增长", "UP" },
+                { L["Grow down"], "DOWN" },
+                { L["Grow up"], "UP" },
             }
         },
         { type = "spacer", height = 5, cols = 24 },
         {
             type = "dropdown",
             key = "iconPosition",
-            label = "图标位置",
+            label = L["Icon position"],
             cols = 12,
             items = {
-                { "左侧", "LEFT" },
-                { "右侧", "RIGHT" },
-                { "隐藏", "HIDDEN" },
+                { L["Left"], "LEFT" },
+                { L["Right"], "RIGHT" },
+                { L["Hide"], "HIDDEN" },
             }
         },
         {
@@ -123,23 +124,23 @@ local function renderContent(container, _menuKey)
             dependsOn = "iconPosition",
             condition = function(cfg) return cfg.iconPosition ~= "HIDDEN" end,
             children = {
-                { type = "slider", key = "iconGap", label = "图标间距", min = -1, max = 20, step = 1, cols = 12 },
+                { type = "slider", key = "iconGap", label = L["Icon gap"], min = -1, max = 20, step = 1, cols = 12 },
             }
         },
         { type = "spacer", height = 10, cols = 24 },
 
-        { type = "subtitle", text = "尺寸", cols = 24 },
+        { type = "subtitle", text = L["Size"], cols = 24 },
         { type = "separator", cols = 24 },
-        { type = "slider", key = "barWidth", label = "条宽", min = 80, max = 600, step = 1, cols = 8 },
-        { type = "slider", key = "barHeight", label = "条高", min = 4, max = 40, step = 1, cols = 8 },
-        { type = "slider", key = "barSpacing", label = "条间距", min = -1, max = 20, step = 1, cols = 8 },
+        { type = "slider", key = "barWidth", label = L["Bar width"], min = 80, max = 600, step = 1, cols = 8 },
+        { type = "slider", key = "barHeight", label = L["Bar height"], min = 4, max = 40, step = 1, cols = 8 },
+        { type = "slider", key = "barSpacing", label = L["Bar spacing"], min = -1, max = 20, step = 1, cols = 8 },
         { type = "spacer", height = 10, cols = 24 },
 
-        { type = "subtitle", text = "外观", cols = 24 },
+        { type = "subtitle", text = L["Appearance"], cols = 24 },
         { type = "separator", cols = 24 },
-        { type = "texturePicker", key = "barTexture", label = "条材质", cols = 8 },
-        { type = "colorPicker", key = "barColor", label = "条颜色", hasAlpha = true, cols = 8 },
-        { type = "colorPicker", key = "barBackgroundColor", label = "背景颜色", hasAlpha = true, cols = 8 },
+        { type = "texturePicker", key = "barTexture", label = L["Bar texture"], cols = 8 },
+        { type = "colorPicker", key = "barColor", label = L["Bar color"], hasAlpha = true, cols = 8 },
+        { type = "colorPicker", key = "barBackgroundColor", label = L["Background color"], hasAlpha = true, cols = 8 },
         { type = "spacer", height = 10, cols = 24 },
 
         {
@@ -147,7 +148,7 @@ local function renderContent(container, _menuKey)
             dependsOn = "showName",
             condition = function(cfg) return cfg.showName == true end,
             children = {
-                Grid.fontGroup("nameFont", "名称文本样式"),
+                Grid.fontGroup("nameFont", L["Name text style"]),
             }
         },
         {
@@ -155,7 +156,7 @@ local function renderContent(container, _menuKey)
             dependsOn = "showDuration",
             condition = function(cfg) return cfg.showDuration == true end,
             children = {
-                Grid.fontGroup("durationFont", "持续时间文本样式"),
+                Grid.fontGroup("durationFont", L["Duration text style"]),
             }
         },
         {
@@ -163,7 +164,7 @@ local function renderContent(container, _menuKey)
             dependsOn = "showStack",
             condition = function(cfg) return cfg.showStack == true end,
             children = {
-                Grid.fontGroup("stackFont", "层数文本样式"),
+                Grid.fontGroup("stackFont", L["Stack text style"]),
             }
         },
     }

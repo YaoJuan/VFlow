@@ -197,7 +197,7 @@ local function EnsureGroupContainer(groupIdx)
 
     -- 注册拖拽
     VFlow.DragFrame.register(container, {
-        label = group.name or ("自定义技能组" .. groupIdx),
+        label = group.name or ((VFlow.L and VFlow.L["Custom skill group"] or "Custom skill group") .. groupIdx),
         onPositionChanged = function(frame, point, x, y)
             group.config.x = x
             group.config.y = y

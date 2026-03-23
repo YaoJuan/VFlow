@@ -10,12 +10,13 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.Skills"
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "技能监控",
-    description = "技能冷却追踪",
+    name = L["Skill Monitor"],
+    description = L["Skill cooldown tracking"],
 })
 
 -- =========================================================
@@ -30,14 +31,14 @@ local UI_LIMITS = {
 }
 
 local GROW_DIRECTION_OPTIONS = {
-    { "向上增长", "up" },
-    { "向下增长", "down" },
+    { L["Grow up"], "up" },
+    { L["Grow down"], "down" },
 }
 
 local ROW_ANCHOR_OPTIONS = {
-    { "左对齐", "left" },
-    { "居中", "center" },
-    { "右对齐", "right" },
+    { L["Left-aligned"], "left" },
+    { L["Center"], "center" },
+    { L["Right-aligned"], "right" },
 }
 
 -- =========================================================
@@ -175,31 +176,31 @@ local mergeLayouts = Utils.mergeLayouts
 -- 自定义组：技能选择器
 local function buildCustomSkillSelector(groupConfig, options)
     return {
-        { type = "subtitle", text = "技能选择", cols = 24 },
+        { type = "subtitle", text = L["Skill Selection"], cols = 24 },
         { type = "separator", cols = 24 },
 
         {
             type = "interactiveText",
             cols = 24,
-            text = "仅可使用{重要技能冷却}中追踪的技能，{点我重新扫描}。可在{编辑模式}中预览和拖拽修改位置",
+            text = L["Only skills tracked in {Important skills} can be used. {Click to rescan}. Preview and drag in {Edit mode}."],
             links = {
-                ["重要技能冷却"] = function()
+                [L["Important skills"]] = function()
                     VFlow.openCooldownManager()
                 end,
-                ["点我重新扫描"] = function()
+                [L["Click to rescan"]] = function()
                     if VFlow.SkillScanner then
                         VFlow.SkillScanner.scan()
                     end
                     Utils.bumpCustomGroupsDataVersion(MODULE_KEY, db.customGroups)
                 end,
-                ["编辑模式"] = function()
+                [L["Edit mode"]] = function()
                     VFlow.toggleSystemEditMode()
                 end,
             }
         },
         { type = "spacer", height = 10, cols = 24 },
 
-        { type = "description", text = "可用技能（点击添加）:", cols = 24 },
+        { type = "description", text = L["Available skills (click to add):"], cols = 24 },
         { type = "spacer", height = 5, cols = 24 },
 
         {
@@ -216,7 +217,7 @@ local function buildCustomSkillSelector(groupConfig, options)
                 tooltip = function(skillInfo)
                     return function(tooltip)
                         tooltip:SetSpellByID(skillInfo.spellID)
-                        tooltip:AddLine("|cff00ff00点击添加到当前组|r", 1, 1, 1)
+                        tooltip:AddLine("|cff00ff00" .. L["Click to add to current group"] .. "|r", 1, 1, 1)
                     end
                 end,
                 onClick = function(skillInfo)
@@ -228,8 +229,8 @@ local function buildCustomSkillSelector(groupConfig, options)
         },
 
         { type = "spacer", height = 10, cols = 24 },
-        { type = "description", text = "当前组技能（点击移除）:", cols = 24 },
-        { type = "checkbox", key = "showOnlyValid", label = "仅显示有效", cols = 24 },
+        { type = "description", text = L["Current group skills (click to remove):"], cols = 24 },
+        { type = "checkbox", key = "showOnlyValid", label = L["Show valid only"], cols = 24 },
 
         {
             type = "for",
@@ -247,10 +248,10 @@ local function buildCustomSkillSelector(groupConfig, options)
                         tooltip:SetSpellByID(skillInfo.spellID)
                         if skillInfo.isMissing then
                             tooltip:AddLine(" ")
-                            tooltip:AddLine("|cffff0000[警告] 该技能不可用或未在冷却管理器中追踪|r")
+                            tooltip:AddLine("|cffff0000" .. L["[WARNING] Spell not available or not tracked in Cooldown Manager"] .. "|r")
                             tooltip:AddLine(" ")
                         end
-                        tooltip:AddLine("|cffff0000点击从当前组移除|r", 1, 1, 1)
+                        tooltip:AddLine("|cffff0000" .. L["Click to remove from current group"] .. "|r", 1, 1, 1)
                     end
                 end,
                 onClick = function(skillInfo)
@@ -284,12 +285,12 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
 
         -- 基础设置
         {
-            { type = "subtitle", text = "基础设置", cols = 24 },
+            { type = "subtitle", text = L["Base Settings"], cols = 24 },
             { type = "separator", cols = 24 },
             {
                 type = "dropdown",
                 key = "growDirection",
-                label = "布局方向",
+                label = L["Layout direction"],
                 cols = 12,
                 items = GROW_DIRECTION_OPTIONS
             },
@@ -297,72 +298,72 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
 
         -- 自定义组：垂直布局
         options.isCustom and {
-            { type = "checkbox", key = "vertical", label = "垂直布局", cols = 24 },
+            { type = "checkbox", key = "vertical", label = L["Vertical layout"], cols = 24 },
         },
 
         -- 布局配置
         {
-            { type = "slider", key = "maxIconsPerRow", label = "每行最大图标数",
+            { type = "slider", key = "maxIconsPerRow", label = L["Max icons per row"],
               min = UI_LIMITS.MAX_ICONS_PER_ROW.min, max = UI_LIMITS.MAX_ICONS_PER_ROW.max, step = 1, cols = 12 },
-            { type = "checkbox", key = "fixedRowLengthByLimit", label = "按最大图标数固定行长", cols = 12 },
-            { type = "dropdown", key = "rowAnchor", label = "行内锚点", cols = 12, items = ROW_ANCHOR_OPTIONS },
-            { type = "slider", key = "spacingX", label = "列间距",
+            { type = "checkbox", key = "fixedRowLengthByLimit", label = L["Fix row length by max icons"], cols = 12 },
+            { type = "dropdown", key = "rowAnchor", label = L["Row anchor"], cols = 12, items = ROW_ANCHOR_OPTIONS },
+            { type = "slider", key = "spacingX", label = L["Column spacing"],
               min = UI_LIMITS.SPACING.min, max = UI_LIMITS.SPACING.max, step = 1, cols = 12 },
-            { type = "slider", key = "spacingY", label = "行间距",
+            { type = "slider", key = "spacingY", label = L["Row spacing"],
               min = UI_LIMITS.SPACING.min, max = UI_LIMITS.SPACING.max, step = 1, cols = 12 },
             { type = "spacer", height = 10, cols = 24 },
         },
 
         -- 图标尺寸
         {
-            { type = "subtitle", text = "图标尺寸", cols = 24 },
+            { type = "subtitle", text = L["Icon dimensions"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "slider", key = "iconWidth", label = "图标宽度",
+            { type = "slider", key = "iconWidth", label = L["Icon width"],
               min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
-            { type = "slider", key = "iconHeight", label = "图标高度",
+            { type = "slider", key = "iconHeight", label = L["Icon height"],
               min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
-            { type = "slider", key = "secondRowIconWidth", label = "第二行图标宽度",
+            { type = "slider", key = "secondRowIconWidth", label = L["Second row icon width"],
               min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
-            { type = "slider", key = "secondRowIconHeight", label = "第二行图标高度",
+            { type = "slider", key = "secondRowIconHeight", label = L["Second row icon height"],
               min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
             { type = "spacer", height = 10, cols = 24 },
         },
 
         -- 键位显示
         {
-            { type = "subtitle", text = "键位显示", cols = 24 },
+            { type = "subtitle", text = L["Keybind display"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "checkbox", key = "showKeybind", label = "显示键位", cols = 12 },
+            { type = "checkbox", key = "showKeybind", label = L["Show keybind"], cols = 12 },
         },
 
         -- 自定义组：位置设置
         options.isCustom and {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "位置设置", cols = 24 },
+            { type = "subtitle", text = L["Position Settings"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "slider", key = "x", label = "X坐标",
+            { type = "slider", key = "x", label = L["X coordinate"],
               min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
-            { type = "slider", key = "y", label = "Y坐标",
+            { type = "slider", key = "y", label = L["Y coordinate"],
               min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
-            { type = "description", text = "提示：也可在编辑模式中拖拽修改位置", cols = 24 },
+            { type = "description", text = L["Tip: Drag in Edit Mode to change position"], cols = 24 },
         },
 
         -- 字体设置
         {
             { type = "spacer", height = 10, cols = 24 },
-            Grid.fontGroup("stackFont", "堆叠文本样式"),
+            Grid.fontGroup("stackFont", L["Stack text style"]),
             { type = "spacer", height = 10, cols = 24 },
-            Grid.fontGroup("cooldownFont", "冷却文本样式"),
+            Grid.fontGroup("cooldownFont", L["Cooldown text style"]),
             { type = "spacer", height = 10, cols = 24 },
-            Grid.fontGroup("keybindFont", "键位文本样式"),
+            Grid.fontGroup("keybindFont", L["Keybind text style"]),
         },
 
         {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "遮罩层配置", cols = 24 },
+            { type = "subtitle", text = L["Mask Config"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "colorPicker", key = "cooldownMaskColor", label = "常规冷却遮罩层颜色", hasAlpha = true, cols = 12 },
-            { type = "colorPicker", key = "buffMaskColor", label = "增益遮罩层颜色", hasAlpha = true, cols = 12 },
+            { type = "colorPicker", key = "cooldownMaskColor", label = L["Normal cooldown mask color"], hasAlpha = true, cols = 12 },
+            { type = "colorPicker", key = "buffMaskColor", label = L["Buff mask color"], hasAlpha = true, cols = 12 },
         }
     )
 
@@ -376,9 +377,9 @@ end
 
 local function renderContent(container, menuKey)
     if menuKey == "skill_important" then
-        renderGroupConfig(container, db.importantSkills, "重要技能组")
+        renderGroupConfig(container, db.importantSkills, L["Important Skill Group"])
     elseif menuKey == "skill_efficiency" then
-        renderGroupConfig(container, db.efficiencySkills, "效能技能组")
+        renderGroupConfig(container, db.efficiencySkills, L["Efficiency Skill Group"])
     elseif menuKey:find("^skill_custom_") then
         local customIndex = tonumber(menuKey:match("skill_custom_(%d+)"))
         if customIndex and db.customGroups[customIndex] then
@@ -388,7 +389,7 @@ local function renderContent(container, menuKey)
                 groupIndex = customIndex
             })
         else
-            local title = VFlow.UI.title(container, "自定义技能组未找到")
+            local title = VFlow.UI.title(container, L["Custom skill group not found"])
             title:SetPoint("TOPLEFT", 10, -10)
         end
     end

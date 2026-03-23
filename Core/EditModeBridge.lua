@@ -72,7 +72,7 @@ end
 
 local function ApplyButtonEmphasis(button)
     if not button then return end
-    button:SetText("|TInterface\\FriendsFrame\\InformationIcon:14:14:0:0|t 打开VFlow进行详细配置")
+    button:SetText("|TInterface\\FriendsFrame\\InformationIcon:14:14:0:0|t " .. (VFlow.L and VFlow.L["Open VFlow for detailed config"] or "Open VFlow for detailed config"))
     local fs = button.GetFontString and button:GetFontString()
     if fs then
         fs:SetTextColor(1, 0.82, 0.2, 1)

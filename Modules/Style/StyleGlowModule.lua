@@ -9,12 +9,13 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.StyleGlow"
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "发光样式",
-    description = "发光样式设置",
+    name = L["Glow Style"],
+    description = L["Glow style settings"],
 })
 
 -- =========================================================
@@ -58,71 +59,65 @@ local db = VFlow.getDB(MODULE_KEY, defaults)
 
 local function renderContent(container, _menuKey)
     local layout = {
-        { type = "title", text = "发光样式", cols = 24 },
+        { type = "title", text = L["Glow Style"], cols = 24 },
         { type = "separator", cols = 24 },
 
-        -- 发光类型选择
-        { type = "dropdown", key = "glowType", label = "发光类型", cols = 12,
+        { type = "dropdown", key = "glowType", label = L["Glow type"], cols = 12,
             items = {
-                { "像素发光", "pixel" },
-                { "自动施法发光", "autocast" },
-                { "按钮发光", "button" },
-                { "触发发光", "proc" },
+                { L["Pixel glow"], "pixel" },
+                { L["Autocast glow"], "autocast" },
+                { L["Button glow"], "button" },
+                { L["Proc glow"], "proc" },
             }
         },
 
         { type = "spacer", cols = 24, height = 10 },
 
-        -- 自定义颜色
-        { type = "checkbox", key = "useCustomColor", label = "使用自定义颜色", cols = 12 },
-        { type = "colorPicker", key = "color", label = "发光颜色", cols = 12 },
+        { type = "checkbox", key = "useCustomColor", label = L["Use custom color"], cols = 12 },
+        { type = "colorPicker", key = "color", label = L["Glow color"], cols = 12 },
 
         { type = "separator", cols = 24 },
 
-        -- Pixel Glow 配置
         { type = "if", dependsOn = "glowType",
             condition = function(cfg) return cfg.glowType == "pixel" end,
             children = {
-                { type = "subtitle", text = "像素发光设置", cols = 24 },
-                { type = "slider", key = "pixelLines", label = "线条数", min = 1, max = 20, step = 1, cols = 12 },
-                { type = "slider", key = "pixelFrequency", label = "频率", min = -2, max = 2, step = 0.05, cols = 12 },
-                { type = "slider", key = "pixelLength", label = "长度 (0=自动)", min = 0, max = 20, step = 1, cols = 12 },
-                { type = "slider", key = "pixelThickness", label = "粗细", min = 1, max = 10, step = 1, cols = 12 },
-                { type = "slider", key = "pixelXOffset", label = "X偏移", min = -20, max = 20, step = 1, cols = 12 },
-                { type = "slider", key = "pixelYOffset", label = "Y偏移", min = -20, max = 20, step = 1, cols = 12 },
+                { type = "subtitle", text = L["Pixel glow settings"], cols = 24 },
+                { type = "slider", key = "pixelLines", label = L["Line count"], min = 1, max = 20, step = 1, cols = 12 },
+                { type = "slider", key = "pixelFrequency", label = L["Frequency"], min = -2, max = 2, step = 0.05, cols = 12 },
+                { type = "slider", key = "pixelLength", label = L["Length (0=auto)"], min = 0, max = 20, step = 1, cols = 12 },
+                { type = "slider", key = "pixelThickness", label = L["Thickness"], min = 1, max = 10, step = 1, cols = 12 },
+                { type = "slider", key = "pixelXOffset", label = L["X offset"], min = -20, max = 20, step = 1, cols = 12 },
+                { type = "slider", key = "pixelYOffset", label = L["Y offset"], min = -20, max = 20, step = 1, cols = 12 },
             }
         },
 
-        -- Autocast Glow 配置
         { type = "if", dependsOn = "glowType",
             condition = function(cfg) return cfg.glowType == "autocast" end,
             children = {
-                { type = "subtitle", text = "自动施法发光设置", cols = 24 },
-                { type = "slider", key = "autocastParticles", label = "粒子数", min = 1, max = 16, step = 1, cols = 12 },
-                { type = "slider", key = "autocastFrequency", label = "频率", min = -2, max = 2, step = 0.05, cols = 12 },
-                { type = "slider", key = "autocastScale", label = "缩放", min = 0.25, max = 3, step = 0.25, cols = 12 },
-                { type = "slider", key = "autocastXOffset", label = "X偏移", min = -20, max = 20, step = 1, cols = 12 },
-                { type = "slider", key = "autocastYOffset", label = "Y偏移", min = -20, max = 20, step = 1, cols = 12 },
+                { type = "subtitle", text = L["Autocast glow settings"], cols = 24 },
+                { type = "slider", key = "autocastParticles", label = L["Particle count"], min = 1, max = 16, step = 1, cols = 12 },
+                { type = "slider", key = "autocastFrequency", label = L["Frequency"], min = -2, max = 2, step = 0.05, cols = 12 },
+                { type = "slider", key = "autocastScale", label = L["Scale"], min = 0.25, max = 3, step = 0.25, cols = 12 },
+                { type = "slider", key = "autocastXOffset", label = L["X offset"], min = -20, max = 20, step = 1, cols = 12 },
+                { type = "slider", key = "autocastYOffset", label = L["Y offset"], min = -20, max = 20, step = 1, cols = 12 },
             }
         },
 
-        -- Button Glow 配置
         { type = "if", dependsOn = "glowType",
             condition = function(cfg) return cfg.glowType == "button" end,
             children = {
-                { type = "subtitle", text = "按钮发光设置", cols = 24 },
-                { type = "slider", key = "buttonFrequency", label = "频率 (0=默认)", min = 0, max = 1, step = 0.01, cols = 12 },
+                { type = "subtitle", text = L["Button glow settings"], cols = 24 },
+                { type = "slider", key = "buttonFrequency", label = L["Frequency (0=default)"], min = 0, max = 1, step = 0.01, cols = 12 },
             }
         },
 
-        -- Proc Glow 配置
         { type = "if", dependsOn = "glowType",
             condition = function(cfg) return cfg.glowType == "proc" end,
             children = {
-                { type = "subtitle", text = "触发发光设置", cols = 24 },
-                { type = "slider", key = "procDuration", label = "持续时间", min = 0.1, max = 5, step = 0.1, cols = 12 },
-                { type = "slider", key = "procXOffset", label = "X偏移", min = -20, max = 20, step = 1, cols = 12 },
-                { type = "slider", key = "procYOffset", label = "Y偏移", min = -20, max = 20, step = 1, cols = 12 },
+                { type = "subtitle", text = L["Proc glow settings"], cols = 24 },
+                { type = "slider", key = "procDuration", label = L["Duration"], min = 0.1, max = 5, step = 0.1, cols = 12 },
+                { type = "slider", key = "procXOffset", label = L["X offset"], min = -20, max = 20, step = 1, cols = 12 },
+                { type = "slider", key = "procYOffset", label = L["Y offset"], min = -20, max = 20, step = 1, cols = 12 },
             }
         },
     }

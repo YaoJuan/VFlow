@@ -11,6 +11,7 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.OtherFeatures"
 local Grid = VFlow.Grid
@@ -18,8 +19,8 @@ local Utils = VFlow.Utils
 local mergeLayouts = Utils.mergeLayouts
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "其他功能",
-    description = "播报与高亮等扩展",
+    name = L["Other Features"],
+    description = L["Announce & highlight extensions"],
 })
 
 -- =========================================================
@@ -47,16 +48,16 @@ local defaults = {
 local db = VFlow.getDB(MODULE_KEY, defaults)
 
 local MODE_ITEMS = {
-    { "文字朗读", "text" },
-    { "自定义音效", "sound" },
+    { L["Text-to-speech"], "text" },
+    { L["Custom sound"], "sound" },
 }
 
 local CHANNEL_ITEMS = {
-    { "主音量", "Master" },
-    { "音效", "SFX" },
-    { "环境", "Ambience" },
-    { "音乐", "Music" },
-    { "对白", "Dialog" },
+    { L["Master"], "Master" },
+    { L["SFX"], "SFX" },
+    { L["Ambience"], "Ambience" },
+    { L["Music"], "Music" },
+    { L["Dialog"], "Dialog" },
 }
 
 local PRIMARY_COLOR = { 0.2, 0.6, 1, 1 }
@@ -68,17 +69,17 @@ local CONFIGURED_COLOR = { 0.2, 0.85, 0.3, 1 }
 
 local function getScanLinks()
     return {
-        ["扫描技能"] = function()
+        [L["Scan Skills"]] = function()
             if VFlow.SkillScanner then
                 VFlow.SkillScanner.scan()
             end
         end,
-        ["扫描BUFF"] = function()
+        [L["Scan BUFFs"]] = function()
             if VFlow.BuffScanner then
                 VFlow.BuffScanner.scan()
             end
         end,
-        ["冷却管理器"] = function()
+        [L["cooldown manager"]] = function()
             VFlow.openCooldownManager()
         end,
     }
@@ -223,9 +224,9 @@ local function ttsIconTemplate()
             return function(tip)
                 tip:SetSpellByID(d.spellID)
                 if hasAlias(d.spellID) then
-                    tip:AddLine("|cff33dd55已配置播报|r", 1, 1, 1, true)
+                    tip:AddLine("|cff33dd55" .. L["Announce configured"] .. "|r", 1, 1, 1, true)
                 end
-                tip:AddLine("|cff00ff00点击编辑|r", 1, 1, 1, true)
+                tip:AddLine("|cff00ff00" .. L["Click to edit"] .. "|r", 1, 1, 1, true)
             end
         end,
         onClick = function(d)
@@ -254,9 +255,9 @@ local function highlightIconTemplate(sourceKind)
             return function(tip)
                 tip:SetSpellByID(d.spellID)
                 if hasHighlightRule(d.spellID) then
-                    tip:AddLine("|cff33dd55已启用高亮|r", 1, 1, 1, true)
+                    tip:AddLine("|cff33dd55" .. L["Highlight configured"] .. "|r", 1, 1, 1, true)
                 end
-                tip:AddLine("|cff00ff00点击编辑|r", 1, 1, 1, true)
+                tip:AddLine("|cff00ff00" .. L["Click to edit"] .. "|r", 1, 1, 1, true)
             end
         end,
         onClick = function(d)
@@ -286,7 +287,7 @@ local function buildSharedTopAndIconGrid(titleText, introText, legendText, forDe
             text = legendText,
         },
         { type = "spacer", height = 8, cols = 24 },
-        { type = "subtitle", text = "技能", cols = 24 },
+        { type = "subtitle", text = L["Skills"], cols = 24 },
         { type = "separator", cols = 24 },
         {
             type = "for",
@@ -296,7 +297,7 @@ local function buildSharedTopAndIconGrid(titleText, introText, legendText, forDe
             template = skillTemplate,
         },
         { type = "spacer", height = 8, cols = 24 },
-        { type = "subtitle", text = "BUFF", cols = 24 },
+        { type = "subtitle", text = L["BUFF"], cols = 24 },
         { type = "separator", cols = 24 },
         {
             type = "for",
@@ -333,7 +334,7 @@ local function buildTtsSelectedConfigLayout()
         {
             type = "dropdown",
             key = "ttsForm.mode",
-            label = "播报方式",
+            label = L["Announce method"],
             cols = 8,
             items = MODE_ITEMS,
         },
@@ -344,7 +345,7 @@ local function buildTtsSelectedConfigLayout()
                 return (cfg.ttsForm and cfg.ttsForm.mode) == "text"
             end,
             children = {
-                { type = "input", key = "ttsForm.text", label = "朗读内容", cols = 16 },
+                { type = "input", key = "ttsForm.text", label = L["Speak content"], cols = 16 },
             },
         },
         {
@@ -354,16 +355,16 @@ local function buildTtsSelectedConfigLayout()
                 return (cfg.ttsForm and cfg.ttsForm.mode) == "sound"
             end,
             children = {
-                { type = "input", key = "ttsForm.sound", label = "音效路径", cols = 16 },
+                { type = "input", key = "ttsForm.sound", label = L["Sound path"], cols = 16 },
                 {
                     type = "description",
                     cols = 24,
-                    text = "|cff888888音效路径示例： Interface\\AddOns\\VFlow\\Sounds\\alert.ogg|r",
+                    text = "|cff888888" .. L["Sound path example: Interface\\AddOns\\VFlow\\Sounds\\alert.ogg"] .. "|r",
                 },
                 {
                     type = "dropdown",
                     key = "ttsForm.soundChannel",
-                    label = "音效频道",
+                    label = L["Sound channel"],
                     cols = 14,
                     items = CHANNEL_ITEMS,
                 },
@@ -372,7 +373,7 @@ local function buildTtsSelectedConfigLayout()
         { type = "spacer", height = 6, cols = 24 },
         {
             type = "button",
-            text = "保存",
+            text = L["Save"],
             cols = 12,
             onClick = function(cfg)
                 local sid = selectedSpellId(cfg)
@@ -390,7 +391,7 @@ local function buildTtsSelectedConfigLayout()
         },
         {
             type = "button",
-            text = "清除配置",
+            text = L["Clear config"],
             cols = 12,
             onClick = function(cfg)
                 local sid = selectedSpellId(cfg)
@@ -410,9 +411,9 @@ end
 
 local function buildFullTtsLayout()
     local top = buildSharedTopAndIconGrid(
-        "自定义播报",
-        "本功能用于覆盖系统默认的「文字转语音」警报，请先在{冷却管理器}中为目标法术开启「文字转语音」警报，否则本功能将不起作用。{扫描技能}或{扫描BUFF}更新下方图标。",
-        "|cff3399ff■|r 当前选中  |cff33dd55■|r 已保存播报",
+        L["Custom Announce"],
+        L["This feature overrides system TTS alerts. Enable TTS for target spell in {cooldown manager} first. {Scan Skills} or {Scan BUFFs} to update icons."],
+        "|cff3399ff■|r " .. L["Current selection"] .. "  |cff33dd55■|r " .. L["Announce configured"],
         { "ttsAliases", "ttsForm.spellId" },
         ttsIconTemplate(),
         ttsIconTemplate()
@@ -430,7 +431,7 @@ local function buildFullTtsLayout()
                 {
                     type = "description",
                     cols = 24,
-                    text = "|cff888888请从上方点击一个技能或 BUFF 图标，再设置朗读或音效。|r",
+                    text = "|cff888888" .. L["Click a skill or BUFF icon above, then set speak or sound."] .. "|r",
                 },
             },
         },
@@ -442,7 +443,7 @@ local function buildFullTtsLayout()
                 return sid ~= nil and sid > 0
             end,
             children = mergeLayouts({
-                { type = "subtitle", text = "当前法术", cols = 24 },
+                { type = "subtitle", text = L["Current spell"], cols = 24 },
                 { type = "separator", cols = 24 },
             }, buildTtsSelectedConfigLayout()),
         },
@@ -482,7 +483,7 @@ local function buildHighlightSelectedConfigLayout()
                 {
                     type = "checkbox",
                     key = "highlightForm.enabled",
-                    label = "技能可用时高亮",
+                    label = L["Highlight when skill ready"],
                     cols = 24,
                 },
             },
@@ -497,7 +498,7 @@ local function buildHighlightSelectedConfigLayout()
                 {
                     type = "checkbox",
                     key = "highlightForm.enabled",
-                    label = "BUFF激活时高亮",
+                    label = L["Highlight when BUFF active"],
                     cols = 24,
                 },
             },
@@ -505,16 +506,16 @@ local function buildHighlightSelectedConfigLayout()
         {
             type = "description",
             cols = 24,
-            text = "|cff888888高亮样式与「样式 → 发光」一致|r",
+            text = "|cff888888" .. L["Highlight style matches Style → Glow"] .. "|r",
         },
     }
 end
 
 local function buildFullHighlightLayout()
     local top = buildSharedTopAndIconGrid(
-        "自定义高亮",
-        "在技能可用或 BUFF 激活时用「发光」样式强调图标。请先在冷却管理器中显示对应技能/BUFF；列表与播报页一致，{扫描技能}或{扫描BUFF}更新。",
-        "|cff3399ff■|r 当前选中  |cff33dd55■|r 已启用高亮",
+        L["Custom Highlight"],
+        L["Highlight icons when skill ready or BUFF active. Show spell/BUFF in cooldown manager first; list matches announce page. {Scan Skills} or {Scan BUFFs} to update."],
+        "|cff3399ff■|r " .. L["Current selection"] .. "  |cff33dd55■|r " .. L["Highlight configured"],
         {
             "highlightRules",
             "highlightForm.spellId",
@@ -530,7 +531,7 @@ local function buildFullHighlightLayout()
         {
             type = "checkbox",
             key = "highlightOnlyInCombat",
-            label = "仅在战斗中高亮",
+            label = L["Highlight only in combat"],
             cols = 24,
         },
         {
@@ -544,7 +545,7 @@ local function buildFullHighlightLayout()
                 {
                     type = "description",
                     cols = 24,
-                    text = "|cff888888请从上方点击一个技能或 BUFF 图标，再设置高亮条件。|r",
+                    text = "|cff888888" .. L["Click a skill or BUFF icon above, then set highlight condition."] .. "|r",
                 },
             },
         },
@@ -556,7 +557,7 @@ local function buildFullHighlightLayout()
                 return sid ~= nil and sid > 0 and cfg.highlightForm and (cfg.highlightForm.source == "skill" or cfg.highlightForm.source == "buff")
             end,
             children = mergeLayouts({
-                { type = "subtitle", text = "当前法术", cols = 24 },
+                { type = "subtitle", text = L["Current spell"], cols = 24 },
                 { type = "separator", cols = 24 },
             }, buildHighlightSelectedConfigLayout()),
         },

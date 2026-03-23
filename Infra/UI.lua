@@ -12,7 +12,14 @@ local UI = {}
 VFlow.UI = UI
 
 local Pool = VFlow.Pool
+local L = VFlow.L
 local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+
+--- LibSharedMedia 各客户端注册的「默认字体」
+local LSM_DEFAULT_FONT_DISPLAY_KEYS = {
+    ["默认"] = true,       -- zhCN
+    ["預設"] = true,       -- zhTW
+}
 
 -- =========================================================
 -- 样式定义 (Modern Flat Style)
@@ -242,6 +249,13 @@ function UI.bindScrollWheel(frame, scrollFrame, step)
         end
         scrollBar:SetValue(value)
     end)
+end
+
+local function LocalizeFontPickerDisplayName(name)
+    if name and LSM_DEFAULT_FONT_DISPLAY_KEYS[name] then
+        return L["Default"]
+    end
+    return name
 end
 
 local function ResolveFontSelection(value)
@@ -742,7 +756,7 @@ function UI.dropdown(parent, label, items, value, onChange, options)
                 if item == val then return item end
             end
         end
-        return "请选择..."
+        return L["Please select..."]
     end
 
     btn.text:SetText(getDisplayText(value))
@@ -1147,7 +1161,8 @@ function UI.fontPicker(parent, label, value, onChange)
 
     local function updateDisplay(fontValue)
         local name, path = ResolveFontSelection(fontValue)
-        btn.text:SetText(name or "Select Font")
+        name = LocalizeFontPickerDisplayName(name)
+        btn.text:SetText(name or L["Select font"])
         if path then
             pcall(function() btn.text:SetFont(path, 10) end)
         end

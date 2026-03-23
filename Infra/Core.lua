@@ -9,6 +9,7 @@ local ADDON_NAME = "VFlow"
 local VFlow = {}
 _G.VFlow = VFlow
 VFlow.build = GetBuildInfo()
+VFlow.L = LibStub("AceLocale-3.0"):GetLocale("VFlow", true) or setmetatable({}, { __index = function(_, k) return tostring(k) end })
 
 -- 模块注册表（用于UI模块注册）
 VFlow.Modules = {}

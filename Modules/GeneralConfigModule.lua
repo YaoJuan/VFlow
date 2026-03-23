@@ -9,14 +9,15 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.GeneralConfig"
 local EXPORT_PREFIX = "VFLOWCFG1:"
 local DEFAULT_PROFILE = "default"
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "配置",
-    description = "通用设置-配置",
+    name = L["Config"],
+    description = L["General settings - Config"],
 })
 
 -- =========================================================
@@ -64,7 +65,7 @@ local function getProfileDropdownItems()
 end
 
 local function getModuleDropdownItems()
-    local items = { { "全部模块", "*" } }
+    local items = { { L["All modules"], "*" } }
     if not VFlow.Store or not VFlow.Store.listModules then
         return items
     end
@@ -86,7 +87,7 @@ end
 local function buildExportPayload(scope)
     local modules = {}
     if not VFlow.Store or not VFlow.Store.getModuleData then
-        return nil, "Store不可用"
+        return nil, L["Store unavailable"]
     end
     if scope == "*" then
         for _, moduleKey in ipairs(VFlow.Store.listModules()) do
@@ -107,7 +108,7 @@ local function buildExportPayload(scope)
         break
     end
     if not hasModule then
-        return nil, "当前选择没有可导出的模块数据"
+        return nil, L["No exportable module data for current selection"]
     end
     return {
         magic = "VFLOWCFG",
@@ -121,55 +122,55 @@ end
 
 local function encodePayload(payload)
     if not LibSerialize or not LibDeflate then
-        return nil, "LibSerialize/LibDeflate 未加载"
+        return nil, L["LibSerialize or LibDeflate not loaded, import/export unavailable."]
     end
     local serialized = LibSerialize:Serialize(payload)
     if type(serialized) ~= "string" or serialized == "" then
-        return nil, "序列化失败"
+        return nil, L["Serialization failed"]
     end
     local compressed = LibDeflate:CompressDeflate(serialized, { level = 9 })
     if type(compressed) ~= "string" then
-        return nil, "压缩失败"
+        return nil, L["Compression failed"]
     end
     local encoded = LibDeflate:EncodeForPrint(compressed)
     if type(encoded) ~= "string" or encoded == "" then
-        return nil, "编码失败"
+        return nil, L["Encoding failed"]
     end
     return EXPORT_PREFIX .. encoded
 end
 
 local function decodePayload(text)
     if not LibSerialize or not LibDeflate then
-        return nil, "LibSerialize/LibDeflate 未加载"
+        return nil, L["LibSerialize or LibDeflate not loaded, import/export unavailable."]
     end
     local raw = trim(text)
     if raw == "" then
-        return nil, "导入文本为空"
+        return nil, L["Import text is empty"]
     end
     if raw:sub(1, #EXPORT_PREFIX) == EXPORT_PREFIX then
         raw = raw:sub(#EXPORT_PREFIX + 1)
     end
     local compressed = LibDeflate:DecodeForPrint(raw)
     if not compressed then
-        return nil, "解码失败"
+        return nil, L["Decoding failed"]
     end
     local serialized = LibDeflate:DecompressDeflate(compressed)
     if not serialized then
-        return nil, "解压失败"
+        return nil, L["Decompression failed"]
     end
     local ok, payload = LibSerialize:Deserialize(serialized)
     if not ok or type(payload) ~= "table" then
-        return nil, "反序列化失败"
+        return nil, L["Deserialization failed"]
     end
     if payload.magic ~= "VFLOWCFG" or type(payload.modules) ~= "table" then
-        return nil, "导入数据格式无效"
+        return nil, L["Import data format invalid"]
     end
     return payload
 end
 
 local function applyImportPayload(payload, scope)
     if not VFlow.Store or not VFlow.Store.setModuleData then
-        return false, 0, "Store不可用"
+        return false, 0, L["Store unavailable"]
     end
     local applied = 0
     if scope == "*" then
@@ -184,7 +185,7 @@ local function applyImportPayload(payload, scope)
     else
         local data = payload.modules[scope]
         if type(data) ~= "table" then
-            return false, 0, "导入包不包含目标模块"
+            return false, 0, L["Import pack does not contain target module"]
         end
         local ok = VFlow.Store.setModuleData(scope, data)
         if ok then
@@ -192,22 +193,22 @@ local function applyImportPayload(payload, scope)
         end
     end
     if applied == 0 then
-        return false, 0, "没有成功导入任何模块"
+        return false, 0, L["No module imported successfully"]
     end
     return true, applied
 end
 
 local function copySourceToCurrent(sourceProfile)
     if not VFlow.Store then
-        return false, 0, "Store不可用"
+        return false, 0, L["Store unavailable"]
     end
     local source = trim(sourceProfile)
     if source == "" then
-        return false, 0, "请选择来源配置"
+        return false, 0, L["Select source config"]
     end
     local current = VFlow.Store.getCurrentProfile()
     if source == current then
-        return false, 0, "来源配置与当前配置相同"
+        return false, 0, L["Source same as current"]
     end
     local modules = VFlow.Store.listModules(source)
     local copied = 0
@@ -221,7 +222,7 @@ local function copySourceToCurrent(sourceProfile)
         end
     end
     if copied == 0 then
-        return false, 0, "来源配置没有可复制数据"
+        return false, 0, L["Source has no data to copy"]
     end
     return true, copied
 end
@@ -253,12 +254,12 @@ local function renderContent(container, _menuKey)
     pageState.moduleImportScope = normalizeSelection(pageState.moduleImportScope, moduleItems, "*")
 
     local layout = {
-        { type = "title", text = "配置管理", cols = 24 },
+        { type = "title", text = L["Config Management"], cols = 24 },
         { type = "separator", cols = 24 },
         {
             type = "dropdown",
             key = "selectedProfile",
-            label = "选择配置",
+            label = L["Select config"],
             cols = 12,
             items = profileItems,
             labelOnLeft = true,
@@ -266,80 +267,80 @@ local function renderContent(container, _menuKey)
                 local ok, err = VFlow.Store.setCurrentProfile(selected)
                 if not ok then
                     cfg.selectedProfile = VFlow.Store.getCurrentProfile()
-                    print("|cffff0000VFlow:|r 切换配置失败: " .. tostring(err))
+                    print("|cffff0000VFlow:|r " .. string.format(L["Switch config failed: %s"], tostring(err)))
                     notifyAndRefresh(container)
                     return
                 end
                 pageState.selectedProfile = selected
                 pageState.copySourceProfile = selected
-                notifyAndRefresh(container, "已切换到配置: " .. selected)
+                notifyAndRefresh(container, string.format(L["Switched to config: %s"], selected))
             end
         },
         {
             type = "button",
-            text = "删除当前配置",
+            text = L["Delete Current"],
             cols = 12,
             onClick = function()
                 local current = VFlow.Store.getCurrentProfile()
                 if current == DEFAULT_PROFILE then
-                    print("|cffff8800VFlow:|r 默认配置不可删除")
+                    print("|cffff8800VFlow:|r " .. L["Default config cannot be deleted"])
                     return
                 end
-                VFlow.UI.dialog(UIParent, "删除配置", "确认删除配置 " .. current .. " 吗？", function()
+                VFlow.UI.dialog(UIParent, L["Delete"], string.format(L["Confirm delete config %s?"], current), function()
                     local ok, err = VFlow.Store.deleteProfile(current)
                     if not ok then
-                        print("|cffff0000VFlow:|r 删除配置失败: " .. tostring(err))
+                        print("|cffff0000VFlow:|r " .. string.format(L["Delete config failed: %s"], tostring(err)))
                         return
                     end
                     pageState.selectedProfile = VFlow.Store.getCurrentProfile()
                     pageState.copySourceProfile = pageState.selectedProfile
-                    notifyAndRefresh(container, "已删除配置: " .. current)
+                    notifyAndRefresh(container, string.format(L["Deleted config: %s"], current))
                 end, nil, { destructive = true })
             end
         },
-        { type = "input", key = "newProfileName", label = "新配置名", cols = 12, labelOnLeft = true },
+        { type = "input", key = "newProfileName", label = L["New config name"], cols = 12, labelOnLeft = true },
         {
             type = "button",
-            text = "新建配置",
+            text = L["Create config"],
             cols = 12,
             onClick = function(cfg)
                 local name = trim(cfg.newProfileName)
                 local ok, err = VFlow.Store.createProfile(name)
                 if not ok then
-                    print("|cffff0000VFlow:|r 新建配置失败: " .. tostring(err))
+                    print("|cffff0000VFlow:|r " .. string.format(L["Create config failed: %s"], tostring(err)))
                     return
                 end
                 local switched, switchErr = VFlow.Store.setCurrentProfile(name)
                 if not switched then
-                    print("|cffff0000VFlow:|r 切换新配置失败: " .. tostring(switchErr))
+                    print("|cffff0000VFlow:|r " .. string.format(L["Switch config failed: %s"], tostring(switchErr)))
                     return
                 end
                 cfg.newProfileName = ""
                 pageState.selectedProfile = name
                 pageState.copySourceProfile = name
-                notifyAndRefresh(container, "已新建配置: " .. name)
+                notifyAndRefresh(container, string.format(L["Created config: %s"], name))
             end
         },
-        { type = "dropdown", key = "copySourceProfile", label = "复制来源", cols = 12, items = profileItems, labelOnLeft = true },
+        { type = "dropdown", key = "copySourceProfile", label = L["Copy from"], cols = 12, items = profileItems, labelOnLeft = true },
         {
             type = "button",
-            text = "复制配置",
+            text = L["Copy config"],
             cols = 12,
             onClick = function(cfg)
                 local ok, copied, err = copySourceToCurrent(cfg.copySourceProfile)
                 if not ok then
-                    print("|cffff0000VFlow:|r 复制配置失败: " .. tostring(err))
+                    print("|cffff0000VFlow:|r " .. string.format(L["Copy config failed: %s"], tostring(err)))
                     return
                 end
-                notifyAndRefresh(container, "已将配置 " .. cfg.copySourceProfile .. " 同步到当前配置，模块数: " .. tostring(copied))
+                notifyAndRefresh(container, string.format(L["Config synced to current, module count: %s"], tostring(copied)))
             end
         },
         { type = "separator", cols = 24 },
-        { type = "subtitle", text = "导出", cols = 24 },
-        { type = "dropdown", key = "moduleExportScope", label = "导出范围", cols = 12, items = moduleItems, labelOnLeft = true },
+        { type = "subtitle", text = L["Export"], cols = 24 },
+        { type = "dropdown", key = "moduleExportScope", label = L["Export scope"], cols = 12, items = moduleItems, labelOnLeft = true },
         {
             type = "button",
-            text = "生成导出串",
+            text = L["Generate export string"],
             cols = 12,
             onClick = function(cfg)
                 local payload, payloadErr = buildExportPayload(cfg.moduleExportScope)
@@ -353,19 +354,19 @@ local function renderContent(container, _menuKey)
                     return
                 end
                 cfg.exportText = encoded
-                print("|cff00ff00VFlow:|r 导出串已生成")
+                print("|cff00ff00VFlow:|r " .. L["Export string generated"])
                 if VFlow.Grid and VFlow.Grid.refresh then
                     VFlow.Grid.refresh(container)
                 end
             end
         },
-        { type = "input", key = "exportText", label = "导出串", cols = 24 },
+        { type = "input", key = "exportText", label = L["Export string"], cols = 24 },
         { type = "separator", cols = 24 },
-        { type = "subtitle", text = "导入", cols = 24 },
-        { type = "dropdown", key = "moduleImportScope", label = "导入范围", cols = 12, items = moduleItems, labelOnLeft = true },
+        { type = "subtitle", text = L["Import"], cols = 24 },
+        { type = "dropdown", key = "moduleImportScope", label = L["Import scope"], cols = 12, items = moduleItems, labelOnLeft = true },
         {
             type = "button",
-            text = "执行导入",
+            text = L["Execute import"],
             cols = 12,
             onClick = function(cfg)
                 local payload, decodeErr = decodePayload(cfg.importText)
@@ -378,23 +379,23 @@ local function renderContent(container, _menuKey)
                     print("|cffff0000VFlow:|r " .. tostring(applyErr))
                     return
                 end
-                notifyAndRefresh(container, "导入完成，已更新模块数: " .. tostring(count))
+                notifyAndRefresh(container, string.format(L["Import complete, modules updated: %s"], tostring(count)))
             end
         },
-        { type = "input", key = "importText", label = "导入串", cols = 24 },
+        { type = "input", key = "importText", label = L["Import string"], cols = 24 },
     }
 
     if not LibSerialize or not LibDeflate then
         table.insert(layout, {
             type = "description",
-            text = "LibSerialize 或 LibDeflate 未加载，导入导出功能不可用。",
+            text = L["LibSerialize or LibDeflate not loaded, import/export unavailable."],
             cols = 24
         })
     end
 
     table.insert(layout, {
         type = "description",
-        text = "部分配置需要 /reload 后才能生效",
+        text = L["Some settings require /reload to take effect"],
         cols = 24
     })
 

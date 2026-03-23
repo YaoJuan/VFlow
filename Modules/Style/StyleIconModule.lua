@@ -10,12 +10,13 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.StyleIcon"
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "图标样式",
-    description = "图标样式设置",
+    name = L["Icon Style"],
+    description = L["Icon style settings"],
 })
 
 -- =========================================================
@@ -55,7 +56,7 @@ local function getBorderOptions()
     local options = {}
     
     table.insert(options, { "1PX", "1PX" })
-    table.insert(options, { "无", "None" })
+    table.insert(options, { L["None"], "None" })
     
     if LSM then
         local borders = LSM:List("border")
@@ -65,7 +66,7 @@ local function getBorderOptions()
     end
     
     if #options == 2 then
-        table.insert(options, { "默认", "Interface\\Buttons\\WHITE8x8" })
+        table.insert(options, { L["Default"], "Interface\\Buttons\\WHITE8x8" })
     end
     
     return options
@@ -73,7 +74,7 @@ end
 
 local function renderContent(container, _menuKey)
     local layout = {
-        { type = "title", text = "图标样式", cols = 24 },
+        { type = "title", text = L["Icon Style"], cols = 24 },
         { type = "separator", cols = 24 },
     }
     
@@ -81,9 +82,9 @@ local function renderContent(container, _menuKey)
         table.insert(layout, {
             type = "interactiveText",
             cols = 24,
-            text = "|cff00ff00已检测到 Masque 插件。|r\n您可以在 {Masque设置} 中配置 VFlow 的图标样式。\n部分 VFlow 自带的美化选项可能已被 Masque 覆盖。",
+            text = L["Masque detected. Configure VFlow icon style in {Masque settings}. Some VFlow options may be overridden."],
             links = {
-                ["Masque设置"] = function()
+                [L["Masque settings"]] = function()
                     SlashCmdList["MASQUE"]("VFlow")
                 end
             }
@@ -92,54 +93,51 @@ local function renderContent(container, _menuKey)
     end
 
     local mainOptions = {
-        -- 图标美化
-        { type = "subtitle", text = "图标美化", cols = 24 },
+        { type = "subtitle", text = L["Icon enhancement"], cols = 24 },
         { type = "separator", cols = 24 },
         
-        { type = "checkbox", key = "zoomIcons", label = "启用图标缩放", cols = 12 },
+        { type = "checkbox", key = "zoomIcons", label = L["Enable icon zoom"], cols = 12 },
         { 
             type = "if", 
             dependsOn = "zoomIcons", 
             condition = function(cfg) return cfg.zoomIcons end,
             children = {
-                { type = "slider", key = "zoomAmount", label = "缩放比例", min = 0, max = 0.3, step = 0.01, cols = 12 },
+                { type = "slider", key = "zoomAmount", label = L["Zoom amount"], min = 0, max = 0.3, step = 0.01, cols = 12 },
             }
         },
         
-        { type = "checkbox", key = "hideIconOverlay", label = "移除图标阴影遮罩", cols = 12 },
-        { type = "checkbox", key = "hideIconOverlayTexture", label = "移除默认图标遮罩", cols = 12 },
+        { type = "checkbox", key = "hideIconOverlay", label = L["Remove icon shadow mask"], cols = 12 },
+        { type = "checkbox", key = "hideIconOverlayTexture", label = L["Remove default icon mask"], cols = 12 },
         
         { type = "spacer", height = 10, cols = 24 },
         
-        -- 边框设置
-        { type = "subtitle", text = "边框设置", cols = 24 },
+        { type = "subtitle", text = L["Border settings"], cols = 24 },
         { type = "separator", cols = 24 },
         
         { 
             type = "dropdown", 
             key = "borderFile", 
-            label = "边框材质", 
+            label = L["Border texture"], 
             cols = 12, 
             items = getBorderOptions 
         },
-        { type = "colorPicker", key = "borderColor", label = "边框颜色", hasAlpha = true, cols = 12 },
+        { type = "colorPicker", key = "borderColor", label = L["Border color"], hasAlpha = true, cols = 12 },
         
-        { type = "slider", key = "borderSize", label = "边框大小", min = 1, max = 50, step = 1, cols = 8 },
-        { type = "slider", key = "borderOffsetX", label = "偏移 X", min = -50, max = 50, step = 1, cols = 8 },
-        { type = "slider", key = "borderOffsetY", label = "偏移 Y", min = -50, max = 50, step = 1, cols = 8 },
+        { type = "slider", key = "borderSize", label = L["Border size"], min = 1, max = 50, step = 1, cols = 8 },
+        { type = "slider", key = "borderOffsetX", label = L["Offset X"], min = -50, max = 50, step = 1, cols = 8 },
+        { type = "slider", key = "borderOffsetY", label = L["Offset Y"], min = -50, max = 50, step = 1, cols = 8 },
 
         { type = "spacer", height = 10, cols = 24 },
         
-        -- 视觉元素
-        { type = "subtitle", text = "视觉元素", cols = 24 },
+        { type = "subtitle", text = L["Visual elements"], cols = 24 },
         { type = "separator", cols = 24 },
         
-        { type = "checkbox", key = "hideDebuffBorder", label = "隐藏Debuff边框 (红色高亮)", cols = 24 },
-        { type = "checkbox", key = "hideCooldownBling", label = "隐藏冷却闪光 (CD完成动画)", cols = 24 },
-        { type = "checkbox", key = "hidePandemicIndicator", label = "隐藏传染指示器 (Dot刷新高亮)", cols = 24 },
+        { type = "checkbox", key = "hideDebuffBorder", label = L["Hide Debuff border (red highlight)"], cols = 24 },
+        { type = "checkbox", key = "hideCooldownBling", label = L["Hide cooldown bling (CD complete animation)"], cols = 24 },
+        { type = "checkbox", key = "hidePandemicIndicator", label = L["Hide pandemic indicator (DoT refresh highlight)"], cols = 24 },
         
         { type = "spacer", height = 10, cols = 24 },
-        { type = "description", text = "注意：部分设置可能需要重载界面 (/reload) 才能完全生效。", cols = 24 },
+        { type = "description", text = L["Note: Some settings may require /reload to fully apply."], cols = 24 },
     }
     
     for _, item in ipairs(mainOptions) do

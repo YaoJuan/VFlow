@@ -176,11 +176,11 @@ end
 local function GetGroupLabel(groupId)
     if groupId == 0 then
         local db = VFlow.getDBIfReady(MODULE_KEY)
-        return (db and db.mainGroup and db.mainGroup.groupName) or "主组"
+        return (db and db.mainGroup and db.mainGroup.groupName) or (VFlow.L and VFlow.L["Main Group"] or "Main Group")
     end
     local db = VFlow.getDBIfReady(MODULE_KEY)
     local g = db and db.customGroups and db.customGroups[groupId]
-    return (g and g.name) or ("物品组" .. groupId)
+    return (g and g.name) or ((VFlow.L and VFlow.L["Item group"] or "Item group") .. groupId)
 end
 
 local function ShouldStandaloneExtract(cfg)

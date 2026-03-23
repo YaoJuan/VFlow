@@ -208,7 +208,7 @@ local function InitGroupContainers()
             container:SetPoint("CENTER", UIParent, "CENTER", x, y)
 
             VFlow.DragFrame.register(container, {
-                label = group.name or ("自定义组" .. i),
+                label = group.name or ((VFlow.L and VFlow.L["Custom group"] or "Custom group") .. i),
                 onPositionChanged = function(frame, point, x, y)
                     group.config.x = x
                     group.config.y = y

@@ -12,12 +12,13 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.Buffs"
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "BUFF监控",
-    description = "BUFF追踪",
+    name = L["BUFF Monitor"],
+    description = L["BUFF tracking"],
 })
 
 -- =========================================================
@@ -31,9 +32,9 @@ local UI_LIMITS = {
 }
 
 local GROW_DIRECTION_OPTIONS = {
-    { "从中间增长", "center" },
-    { "从起点增长", "start" },
-    { "从终点增长", "end" },
+    { L["Grow from center"], "center" },
+    { L["Grow from start"], "start" },
+    { L["Grow from end"], "end" },
 }
 
 local DEFAULT_POTIONS = {
@@ -195,31 +196,31 @@ local mergeLayouts = Utils.mergeLayouts
 -- 自定义组：BUFF 选择器
 local function buildCustomBuffSelector(groupConfig, options)
     return {
-        { type = "subtitle", text = "BUFF选择", cols = 24 },
+        { type = "subtitle", text = L["BUFF Selection"], cols = 24 },
         { type = "separator", cols = 24 },
 
         {
             type = "interactiveText",
             cols = 24,
-            text = "仅可使用{冷却管理器}中追踪的BUFF，{点我重新扫描}。可在{编辑模式}中预览和拖拽修改位置",
+            text = L["Only tracked BUFFs in {Cooldown Manager} can be used. {Click to rescan}. Preview and drag in {Edit mode}."],
             links = {
-                ["冷却管理器"] = function()
+                [L["Cooldown Manager"]] = function()
                     VFlow.openCooldownManager()
                 end,
-                ["点我重新扫描"] = function()
+                [L["Click to rescan"]] = function()
                     if VFlow.BuffScanner then
                         VFlow.BuffScanner.scan()
                     end
                     Utils.bumpCustomGroupsDataVersion(MODULE_KEY, db.customGroups)
                 end,
-                ["编辑模式"] = function()
+                [L["Edit mode"]] = function()
                     VFlow.toggleSystemEditMode()
                 end,
             }
         },
         { type = "spacer", height = 10, cols = 24 },
 
-        { type = "description", text = "可用BUFF（点击添加）:", cols = 24 },
+        { type = "description", text = L["Available BUFFs (click to add):"], cols = 24 },
         { type = "spacer", height = 5, cols = 24 },
 
         {
@@ -236,7 +237,7 @@ local function buildCustomBuffSelector(groupConfig, options)
                 tooltip = function(buffInfo)
                     return function(tooltip)
                         tooltip:SetSpellByID(buffInfo.spellID)
-                        tooltip:AddLine("|cff00ff00点击添加到当前组|r", 1, 1, 1)
+                        tooltip:AddLine("|cff00ff00" .. L["Click to add to current group"] .. "|r", 1, 1, 1)
                     end
                 end,
                 onClick = function(buffInfo)
@@ -248,8 +249,8 @@ local function buildCustomBuffSelector(groupConfig, options)
         },
 
         { type = "spacer", height = 10, cols = 24 },
-        { type = "description", text = "当前组BUFF（点击移除）:", cols = 24 },
-        { type = "checkbox", key = "showOnlyValid", label = "仅显示有效", cols = 24 },
+        { type = "description", text = L["Current group BUFFs (click to remove):"], cols = 24 },
+        { type = "checkbox", key = "showOnlyValid", label = L["Show valid only"], cols = 24 },
 
         {
             type = "for",
@@ -267,10 +268,10 @@ local function buildCustomBuffSelector(groupConfig, options)
                         tooltip:SetSpellByID(buffInfo.spellID)
                         if buffInfo.isMissing then
                             tooltip:AddLine(" ")
-                            tooltip:AddLine("|cffff0000[警告] 该BUFF不可用或未在冷却管理器中追踪|r")
+                            tooltip:AddLine("|cffff0000" .. L["[WARNING] BUFF not available or not tracked in Cooldown Manager"] .. "|r")
                             tooltip:AddLine(" ")
                         end
-                        tooltip:AddLine("|cffff0000点击从当前组移除|r", 1, 1, 1)
+                        tooltip:AddLine("|cffff0000" .. L["Click to remove from current group"] .. "|r", 1, 1, 1)
                     end
                 end,
                 onClick = function(buffInfo)
@@ -304,13 +305,13 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
 
         -- 基础设置
         {
-            { type = "subtitle", text = "基础设置", cols = 24 },
+            { type = "subtitle", text = L["Base Settings"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "checkbox", key = "dynamicLayout", label = "动态布局", cols = 12 },
+            { type = "checkbox", key = "dynamicLayout", label = L["Dynamic layout"], cols = 12 },
         },
 
         options.showVerticalLayoutOption and {
-            { type = "checkbox", key = "vertical", label = "垂直布局", cols = 12 },
+            { type = "checkbox", key = "vertical", label = L["Vertical layout"], cols = 12 },
         },
 
         -- 动态布局选项
@@ -323,7 +324,7 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                     {
                         type = "dropdown",
                         key = "growDirection",
-                        label = "生长方向",
+                        label = L["Grow direction"],
                         cols = 12,
                         items = GROW_DIRECTION_OPTIONS
                     },
@@ -333,42 +334,42 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
 
         -- 尺寸和间距
         {
-            { type = "slider", key = "spacingX", label = "列间距",
+            { type = "slider", key = "spacingX", label = L["Column spacing"],
               min = UI_LIMITS.SPACING.min, max = UI_LIMITS.SPACING.max, step = 1, cols = 12 },
-            { type = "slider", key = "spacingY", label = "行间距",
+            { type = "slider", key = "spacingY", label = L["Row spacing"],
               min = UI_LIMITS.SPACING.min, max = UI_LIMITS.SPACING.max, step = 1, cols = 12 },
-            { type = "slider", key = "width", label = "宽度",
+            { type = "slider", key = "width", label = L["Width"],
               min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
-            { type = "slider", key = "height", label = "高度",
+            { type = "slider", key = "height", label = L["Height"],
               min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
         },
 
         -- 自定义组：位置设置
         options.isCustom and {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "位置设置", cols = 24 },
+            { type = "subtitle", text = L["Position Settings"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "slider", key = "x", label = "X坐标",
+            { type = "slider", key = "x", label = L["X coordinate"],
               min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
-            { type = "slider", key = "y", label = "Y坐标",
+            { type = "slider", key = "y", label = L["Y coordinate"],
               min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
-            { type = "description", text = "提示：也可在编辑模式中拖拽修改位置", cols = 24 },
+            { type = "description", text = L["Tip: Drag in Edit Mode to change position"], cols = 24 },
         },
 
         -- 字体设置
         {
             { type = "spacer", height = 10, cols = 24 },
-            Grid.fontGroup("stackFont", "堆叠文字字体"),
+            Grid.fontGroup("stackFont", L["Stack font"]),
             { type = "spacer", height = 10, cols = 24 },
-            Grid.fontGroup("cooldownFont", "冷却读秒字体"),
+            Grid.fontGroup("cooldownFont", L["Cooldown countdown font"]),
         },
 
         -- 遮罩层配置
         {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "遮罩层配置", cols = 24 },
+            { type = "subtitle", text = L["Mask Config"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "colorPicker", key = "cooldownMaskColor", label = "持续时间遮罩层颜色", hasAlpha = true, cols = 12 },
+            { type = "colorPicker", key = "cooldownMaskColor", label = L["Duration mask color"], hasAlpha = true, cols = 12 },
         }
     )
 
@@ -391,7 +392,7 @@ local function renderTrinketPotionConfig(container, groupConfig)
     local layout = mergeLayouts(
         -- 标题
         {
-            { type = "title", text = "饰品&药水", cols = 24 },
+            { type = "title", text = L["Trinkets & Potions"], cols = 24 },
             { type = "separator", cols = 24 },
         },
 
@@ -400,9 +401,9 @@ local function renderTrinketPotionConfig(container, groupConfig)
             {
                 type = "interactiveText",
                 cols = 24,
-                text = "可在{编辑模式}中预览和拖拽修改位置",
+                text = L["Preview and drag in {Edit mode} to change position"],
                 links = {
-                    ["编辑模式"] = function()
+                    [L["Edit mode"]] = function()
                         VFlow.toggleSystemEditMode()
                     end,
                 }
@@ -412,17 +413,17 @@ local function renderTrinketPotionConfig(container, groupConfig)
 
         -- 物品监控
         {
-            { type = "subtitle", text = "物品监控", cols = 24 },
+            { type = "subtitle", text = L["Item monitor"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "checkbox", key = "autoTrinkets", label = "自动识别主动饰品（槽位13/14）", cols = 24 },
+            { type = "checkbox", key = "autoTrinkets", label = L["Auto-detect trinkets (slot 13/14)"], cols = 24 },
             { type = "spacer", height = 10, cols = 24 },
         },
 
         -- 物品ID输入区
         {
-            { type = "description", text = "手动添加物品:", cols = 24 },
+            { type = "description", text = L["Manual add item:"], cols = 24 },
             { type = "spacer", height = 5, cols = 24 },
-            { type = "input", key = "_inputItemID", label = "物品ID", cols = 6, numeric = true, labelOnLeft = true },
+            { type = "input", key = "_inputItemID", label = L["Item ID"], cols = 6, numeric = true, labelOnLeft = true },
         },
 
         -- 添加按钮（当不显示持续时间输入框时显示）
@@ -434,23 +435,23 @@ local function renderTrinketPotionConfig(container, groupConfig)
                 children = {
                     {
                         type = "button",
-                        text = "添加",
+                        text = L["Add"],
                         cols = 3,
                         onClick = function(cfg)
                             local itemIDText = cfg._inputItemID or ""
                             if itemIDText == "" then
-                                print("|cffff0000VFlow:|r 请输入物品ID")
+                                print("|cffff0000VFlow:|r " .. L["Please enter item ID"])
                                 return
                             end
 
                             local itemID = tonumber(itemIDText)
                             if not itemID then
-                                print("|cffff0000VFlow:|r 无效的物品ID")
+                                print("|cffff0000VFlow:|r " .. L["Invalid item ID"])
                                 return
                             end
 
                             if cfg.itemIDs[itemID] then
-                                print("|cffff0000VFlow:|r 该物品已添加")
+                                print("|cffff0000VFlow:|r " .. L["Item already added"])
                                 return
                             end
 
@@ -467,11 +468,11 @@ local function renderTrinketPotionConfig(container, groupConfig)
                                 VFlow.Store.set(MODULE_KEY, "trinketPotion.itemDurations", cfg.itemDurations)
                                 cfg._inputItemID = ""
                                 VFlow.Store.set(MODULE_KEY, "trinketPotion._inputItemID", "")
-                                print("|cff00ff00VFlow:|r 已添加物品 " .. itemID .. "（持续时间: " .. duration .. "秒）")
+                                print("|cff00ff00VFlow:|r " .. string.format(L["Added item %d (duration: %d sec)"], itemID, duration))
                             else
                                 cfg._showDurationInput = true
                                 VFlow.Store.set(MODULE_KEY, "trinketPotion._showDurationInput", true)
-                                print("|cffff9900VFlow:|r 无法自动解析持续时间，请手动输入")
+                                print("|cffff9900VFlow:|r " .. L["Cannot parse duration automatically, please enter manually"])
                             end
                         end,
                     },
@@ -486,17 +487,17 @@ local function renderTrinketPotionConfig(container, groupConfig)
                 dependsOn = "_showDurationInput",
                 condition = function(cfg) return cfg._showDurationInput end,
                 children = {
-                    { type = "input", key = "_inputDuration", label = "持续时间(秒)", cols = 6, numeric = true },
+                    { type = "input", key = "_inputDuration", label = L["Duration (sec)"], cols = 6, numeric = true },
                     {
                         type = "button",
-                        text = "确认",
+                        text = L["Confirm"],
                         cols = 3,
                         onClick = function(cfg)
                             local itemIDText = cfg._inputItemID or ""
                             local durationText = cfg._inputDuration or ""
 
                             if itemIDText == "" or durationText == "" then
-                                print("|cffff0000VFlow:|r 请输入物品ID和持续时间")
+                                print("|cffff0000VFlow:|r " .. L["Please enter item ID and duration"])
                                 return
                             end
 
@@ -504,7 +505,7 @@ local function renderTrinketPotionConfig(container, groupConfig)
                             local duration = tonumber(durationText)
 
                             if not itemID or not duration or duration <= 0 then
-                                print("|cffff0000VFlow:|r 无效的输入")
+                                print("|cffff0000VFlow:|r " .. L["Invalid input"])
                                 return
                             end
 
@@ -520,12 +521,12 @@ local function renderTrinketPotionConfig(container, groupConfig)
                             VFlow.Store.set(MODULE_KEY, "trinketPotion._inputDuration", "")
                             VFlow.Store.set(MODULE_KEY, "trinketPotion._showDurationInput", false)
 
-                            print("|cff00ff00VFlow:|r 已添加物品 " .. itemID .. "（持续时间: " .. duration .. "秒）")
+                            print("|cff00ff00VFlow:|r " .. string.format(L["Added item %d (duration: %d sec)"], itemID, duration))
                         end,
                     },
                     {
                         type = "button",
-                        text = "取消",
+                        text = L["Cancel"],
                         cols = 3,
                         onClick = function(cfg)
                             cfg._inputItemID = ""
@@ -543,7 +544,7 @@ local function renderTrinketPotionConfig(container, groupConfig)
         -- 已监控的物品列表
         {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "description", text = "已监控的物品（点击删除）:", cols = 24 },
+            { type = "description", text = L["Monitored items (click to delete):"], cols = 24 },
             { type = "spacer", height = 5, cols = 24 },
             {
                 type = "for",
@@ -559,7 +560,7 @@ local function renderTrinketPotionConfig(container, groupConfig)
                             local itemName, _, _, _, _, _, _, _, _, itemIcon = C_Item.GetItemInfo(itemData.itemID)
                             table.insert(items, {
                                 itemID = itemData.itemID,
-                                name = itemName or ("物品 " .. itemData.itemID),
+                                name = itemName or string.format(L["Item %s"], itemData.itemID),
                                 icon = itemIcon or itemData.icon or 134400,
                                 duration = itemData.duration or 0,
                                 isAuto = true,
@@ -572,7 +573,7 @@ local function renderTrinketPotionConfig(container, groupConfig)
                         local itemName, _, _, _, _, _, _, _, _, itemIcon = C_Item.GetItemInfo(itemID)
                         table.insert(items, {
                             itemID = itemID,
-                            name = itemName or ("物品 " .. itemID),
+                            name = itemName or string.format(L["Item %s"], itemID),
                             icon = itemIcon or 134400,
                             duration = groupConfig.itemDurations[itemID] or 0,
                             isAuto = false,
@@ -590,18 +591,18 @@ local function renderTrinketPotionConfig(container, groupConfig)
                         return function(tooltip)
                             tooltip:SetItemByID(itemData.itemID)
                             tooltip:AddLine(" ")
-                            tooltip:AddLine("持续时间: " .. itemData.duration .. "秒", 1, 1, 1)
+                            tooltip:AddLine(string.format(L["Duration: %d sec"], itemData.duration), 1, 1, 1)
                             tooltip:AddLine(" ")
                             if itemData.isAuto then
-                                tooltip:AddLine("|cff808080自动检测的饰品（不可删除）|r", 1, 1, 1)
+                                tooltip:AddLine("|cff808080" .. L["Auto-detected trinket (cannot delete)"] .. "|r", 1, 1, 1)
                             else
-                                tooltip:AddLine("|cffff0000点击删除|r", 1, 1, 1)
+                                tooltip:AddLine("|cffff0000" .. L["Click to delete"] .. "|r", 1, 1, 1)
                             end
                         end
                     end,
                     onClick = function(itemData)
                         if itemData.isAuto then
-                            print("|cffff0000VFlow:|r 自动检测的饰品不可删除，请关闭自动识别开关")
+                            print("|cffff0000VFlow:|r " .. L["Auto-detected trinket cannot be deleted. Disable auto-detect."])
                             return
                         end
 
@@ -617,10 +618,10 @@ local function renderTrinketPotionConfig(container, groupConfig)
 
         -- 基础设置
         {
-            { type = "subtitle", text = "基础设置", cols = 24 },
+            { type = "subtitle", text = L["Base Settings"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "checkbox", key = "dynamicLayout", label = "动态布局", cols = 12 },
-            { type = "checkbox", key = "vertical", label = "垂直布局", cols = 12 },
+            { type = "checkbox", key = "dynamicLayout", label = L["Dynamic layout"], cols = 12 },
+            { type = "checkbox", key = "vertical", label = L["Vertical layout"], cols = 12 },
         },
 
         -- 动态布局选项
@@ -633,7 +634,7 @@ local function renderTrinketPotionConfig(container, groupConfig)
                     {
                         type = "dropdown",
                         key = "growDirection",
-                        label = "生长方向",
+                        label = L["Grow direction"],
                         cols = 12,
                         items = GROW_DIRECTION_OPTIONS
                     },
@@ -643,40 +644,40 @@ local function renderTrinketPotionConfig(container, groupConfig)
 
         -- 尺寸和间距
         {
-            { type = "slider", key = "spacingX", label = "列间距",
+            { type = "slider", key = "spacingX", label = L["Column spacing"],
               min = UI_LIMITS.SPACING.min, max = UI_LIMITS.SPACING.max, step = 1, cols = 12 },
-            { type = "slider", key = "spacingY", label = "行间距",
+            { type = "slider", key = "spacingY", label = L["Row spacing"],
               min = UI_LIMITS.SPACING.min, max = UI_LIMITS.SPACING.max, step = 1, cols = 12 },
-            { type = "slider", key = "width", label = "宽度",
+            { type = "slider", key = "width", label = L["Width"],
               min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
-            { type = "slider", key = "height", label = "高度",
+            { type = "slider", key = "height", label = L["Height"],
               min = UI_LIMITS.SIZE.min, max = UI_LIMITS.SIZE.max, step = 1, cols = 12 },
             { type = "spacer", height = 10, cols = 24 },
         },
 
         -- 位置设置
         {
-            { type = "subtitle", text = "位置设置", cols = 24 },
+            { type = "subtitle", text = L["Position Settings"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "slider", key = "x", label = "X坐标",
+            { type = "slider", key = "x", label = L["X coordinate"],
               min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
-            { type = "slider", key = "y", label = "Y坐标",
+            { type = "slider", key = "y", label = L["Y coordinate"],
               min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
-            { type = "description", text = "提示：也可在编辑模式中拖拽修改位置", cols = 24 },
+            { type = "description", text = L["Tip: Drag in Edit Mode to change position"], cols = 24 },
             { type = "spacer", height = 10, cols = 24 },
         },
 
         -- 字体设置
         {
-            Grid.fontGroup("cooldownFont", "冷却读秒字体"),
+            Grid.fontGroup("cooldownFont", L["Cooldown countdown font"]),
         },
 
         -- 遮罩层配置
         {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "遮罩层配置", cols = 24 },
+            { type = "subtitle", text = L["Mask Config"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "colorPicker", key = "cooldownMaskColor", label = "持续时间遮罩层颜色", hasAlpha = true, cols = 12 },
+            { type = "colorPicker", key = "cooldownMaskColor", label = L["Duration mask color"], hasAlpha = true, cols = 12 },
         }
     )
 
@@ -685,7 +686,7 @@ end
 
 local function renderContent(container, menuKey)
     if menuKey == "buff_monitor" then
-        renderGroupConfig(container, db.buffMonitor, "主BUFF组", {
+        renderGroupConfig(container, db.buffMonitor, L["Main BUFF Group"], {
             showVerticalLayoutOption = false
         })
     elseif menuKey == "buff_trinket_potion" then
@@ -700,7 +701,7 @@ local function renderContent(container, menuKey)
                 showVerticalLayoutOption = true
             })
         else
-            local title = VFlow.UI.title(container, "自定义BUFF组未找到")
+            local title = VFlow.UI.title(container, L["Custom BUFF group not found"])
             title:SetPoint("TOPLEFT", 10, -10)
         end
     end

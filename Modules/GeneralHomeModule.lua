@@ -9,16 +9,17 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.GeneralHome"
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "首页",
-    description = "通用设置-首页",
+    name = L["Home"],
+    description = L["General settings - Home"],
 })
 
 -- =========================================================
--- SECTION 2: 更新日志与路线图（静态数据）
+-- SECTION 2: 更新日志（仅中文客户端显示）
 -- =========================================================
 
 local CHANGELOG = {
@@ -81,18 +82,13 @@ local CHANGELOG = {
     },
 }
 
-local ROADMAP = {
-    "多语言支持",
-    "资源条",
-    "自定义播报",
-    "自定义高亮"
-}
-
 -- =========================================================
 -- SECTION 3: 渲染
 -- =========================================================
 
 local function renderContent(container, _menuKey)
+    local locale = GAME_LOCALE or GetLocale()
+    local isZh = (locale == "zhCN" or locale == "zhTW")
     local db = VFlow.getDB(MODULE_KEY, {
         hide = false,
         minimapPos = 220,
@@ -146,34 +142,34 @@ local function renderContent(container, _menuKey)
             end
         },
 
-        -- 设置
-        { type = "subtitle", text = "通用设置", cols = 24 },
+        { type = "subtitle", text = L["General Settings"], cols = 24 },
         { type = "separator", cols = 24 },
         {
             type = "checkbox",
             key = "hide",
-            label = "隐藏小地图按钮",
+            label = L["Hide minimap button"],
             cols = 12,
         },
         {
             type = "checkbox",
             key = "enableWaCommand",
-            label = "允许使用 /wa 命令打开插件 (需重载)",
+            label = L["Allow /wa command to open addon (reload required)"],
             cols = 12,
             onChange = function(_, value)
                 if value then
-                    print("|cff00ff00VFlow:|r 已启用 /wa 命令，请输入 /reload 重载界面以生效")
+                    print("|cff00ff00VFlow:|r " .. L["Enabled /wa command, /reload to apply"])
                 else
-                    print("|cff00ff00VFlow:|r 已禁用 /wa 命令，请输入 /reload 重载界面以生效")
+                    print("|cff00ff00VFlow:|r " .. L["Disabled /wa command, /reload to apply"])
                 end
             end
         },
+    }
 
-        -- 更新日志：默认仅最新一条；往期按需展开
-        { type = "spacer", height = 6, cols = 24 },
-        { type = "subtitle", text = "更新日志", cols = 24 },
-        { type = "separator", cols = 24 },
-        {
+    if isZh then
+        layout[#layout + 1] = { type = "spacer", height = 6, cols = 24 }
+        layout[#layout + 1] = { type = "subtitle", text = L["Changelog"], cols = 24 }
+        layout[#layout + 1] = { type = "separator", cols = 24 }
+        layout[#layout + 1] = {
             type = "customRender",
             cols = 24,
             render = function(parent)
@@ -181,14 +177,14 @@ local function renderContent(container, _menuKey)
                     renderOneChangelogBlock(parent, CHANGELOG[1], true)
                 end
             end
-        },
-    }
+        }
+    end
 
-    if #CHANGELOG > 1 then
+    if isZh and #CHANGELOG > 1 then
         layout[#layout + 1] = {
             type = "checkbox",
             key = "changelogShowHistory",
-            label = string.format("显示历史更新日志（另 %d 项）", #CHANGELOG - 1),
+            label = string.format(L["Show history changelog (%d more)"], #CHANGELOG - 1),
             cols = 24,
         }
         layout[#layout + 1] = {
@@ -199,7 +195,7 @@ local function renderContent(container, _menuKey)
             end,
             children = {
                 { type = "spacer", height = 4, cols = 24 },
-                { type = "subtitle", text = "历史更新日志", cols = 24 },
+                { type = "subtitle", text = L["History changelog"], cols = 24 },
                 { type = "separator", cols = 24 },
                 {
                     type = "for",
@@ -223,23 +219,21 @@ local function renderContent(container, _menuKey)
     end
 
     local tail = {
-        -- 核心机制说明
         { type = "spacer", height = 10, cols = 24 },
-        { type = "subtitle", text = "功能说明", cols = 24 },
+        { type = "subtitle", text = L["Feature Description"], cols = 24 },
         { type = "separator", cols = 24 },
         {
             type = "interactiveText",
             cols = 24,
-            text =
-            "插件中大部分功能基于系统冷却管理器实现，你需要在{冷却管理器}中配置你需要监控的技能，通过本插件进行美化和增强。支持技能分组，BUFF分组，自定义图形监控等功能。框体移动有两种方式：{系统编辑模式}会打开暴雪编辑界面；插件右上角的{内部编辑模式}，不依赖暴雪编辑界面，可直接编辑本插件内所有已注册框体。",
+            text = L["Most features use the system Cooldown Manager. Configure tracked spells in {cooldown manager}, enhance with this addon. Supports skill groups, BUFF groups, custom monitors. Two ways to move frames: {System Edit Mode} opens Blizzard's editor; {Internal Edit Mode} in top-right directly edits addon frames."],
             links = {
-                ["冷却管理器"] = function()
+                [L["cooldown manager"]] = function()
                     VFlow.openCooldownManager()
                 end,
-                ["系统编辑模式"] = function()
+                [L["System Edit Mode"]] = function()
                     VFlow.toggleSystemEditMode()
                 end,
-                ["内部编辑模式"] = function()
+                [L["Internal Edit Mode"]] = function()
                     if VFlow.DragFrame and VFlow.DragFrame.setInternalEditMode then
                         VFlow.DragFrame.setInternalEditMode(true)
                     end
@@ -247,9 +241,8 @@ local function renderContent(container, _menuKey)
             }
         },
 
-        -- 相关链接
         { type = "spacer", height = 10, cols = 24 },
-        { type = "subtitle", text = "相关链接", cols = 24 },
+        { type = "subtitle", text = L["Related Links"], cols = 24 },
         { type = "separator", cols = 24 },
         {
             type = "customRender",
@@ -258,7 +251,7 @@ local function renderContent(container, _menuKey)
             render = function(parent)
                 local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 label:SetPoint("TOPLEFT", 0, 0)
-                label:SetText("GitHub 地址")
+                label:SetText(L["GitHub"])
                 label:SetTextColor(unpack(githubColor))
 
                 local editBox = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
@@ -300,7 +293,7 @@ local function renderContent(container, _menuKey)
             render = function(parent)
                 local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 label:SetPoint("TOPLEFT", 0, 0)
-                label:SetText("NGA 帖子")
+                label:SetText(L["NGA Post"])
                 label:SetTextColor(unpack(ngaColor))
 
                 local editBox = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
@@ -334,26 +327,6 @@ local function renderContent(container, _menuKey)
                 editBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
                 editBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
             end
-        },
-
-        -- 开发计划
-        { type = "spacer", height = 10, cols = 24 },
-        { type = "subtitle", text = "开发计划", cols = 24 },
-        { type = "separator", cols = 24 },
-        {
-            type = "for",
-            cols = 24,
-            dataSource = ROADMAP,
-            template = {
-                type = "customRender",
-                height = 20,
-                render = function(parent, _, _, item)
-                    local text = item._forData
-                    local line = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-                    line:SetPoint("TOPLEFT", 10, 0)
-                    line:SetText("• " .. text)
-                end
-            }
         },
     }
 

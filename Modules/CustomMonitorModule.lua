@@ -11,12 +11,13 @@
 
 local VFlow = _G.VFlow
 if not VFlow then return end
+local L = VFlow.L
 
 local MODULE_KEY = "VFlow.CustomMonitor"
 
 VFlow.registerModule(MODULE_KEY, {
-    name = "自定义图形监控",
-    description = "技能冷却/BUFF持续时间条形监控",
+    name = L["Graphic Monitor"],
+    description = L["Skill cooldown/BUFF duration bar monitor"],
 })
 
 -- =========================================================
@@ -32,51 +33,51 @@ local UI_LIMITS = {
 }
 
 local MONITOR_TYPE_SKILL_OPTIONS = {
-    { "技能冷却/充能", "cooldown" },
+    { L["Skill cooldown/Charge"], "cooldown" },
 }
 
 local MONITOR_TYPE_BUFF_OPTIONS = {
-    { "BUFF持续时间", "duration" },
-    { "BUFF堆叠层数", "stacks" },
+    { L["BUFF duration"], "duration" },
+    { L["BUFF stack count"], "stacks" },
 }
 
 local SHAPE_OPTIONS = {
-    { "条形", "bar" },
-    { "环形", "ring" },
+    { L["Bar"], "bar" },
+    { L["Ring"], "ring" },
 }
 
 local BAR_DIRECTION_OPTIONS = {
-    { "水平", "horizontal" },
-    { "垂直", "vertical" },
+    { L["Horizontal"], "horizontal" },
+    { L["Vertical"], "vertical" },
 }
 
 local BAR_FILL_OPTIONS = {
-    { "增加", "fill" },
-    { "衰减", "drain" },
+    { L["Fill"], "fill" },
+    { L["Drain"], "drain" },
 }
 
 local BORDER_THICKNESS_OPTIONS = {
     { "1px", "1" },
-    { "细", "2" },
-    { "粗", "3" },
+    { L["Thin"], "2" },
+    { L["Thick"], "3" },
 }
 
 local ICON_POSITION_OPTIONS = {
-    { "左侧", "LEFT" },
-    { "右侧", "RIGHT" },
-    { "上方", "TOP" },
-    { "下方", "BOTTOM" },
+    { L["Left"], "LEFT" },
+    { L["Right"], "RIGHT" },
+    { L["Top"], "TOP" },
+    { L["Bottom"], "BOTTOM" },
 }
 
 local FRAME_STRATA_OPTIONS = {
-    { "背景", "BACKGROUND" },
-    { "低", "LOW" },
-    { "中", "MEDIUM" },
-    { "高", "HIGH" },
-    { "对话框", "DIALOG" },
-    { "全屏", "FULLSCREEN" },
-    { "全屏对话框", "FULLSCREEN_DIALOG" },
-    { "工具提示", "TOOLTIP" },
+    { L["Background"], "BACKGROUND" },
+    { L["Low"], "LOW" },
+    { L["Medium"], "MEDIUM" },
+    { L["High"], "HIGH" },
+    { L["Dialog"], "DIALOG" },
+    { L["Fullscreen"], "FULLSCREEN" },
+    { L["Fullscreen Dialog"], "FULLSCREEN_DIALOG" },
+    { L["Tooltip"], "TOOLTIP" },
 }
 
 -- =========================================================
@@ -184,33 +185,32 @@ local mergeLayouts = Utils.mergeLayouts
 
 local function visibilityGroup(isBuffMonitor)
     local items = {
-        { type = "subtitle", text = "显示条件", cols = 24 },
+        { type = "subtitle", text = L["Visibility Conditions"], cols = 24 },
         { type = "separator", cols = 24 },
         {
             type = "dropdown",
             key = "visibilityMode",
-            label = "仅以下条件时",
+            label = L["Only when the following conditions"],
             cols = 12,
             items = {
-                { "隐藏", "hide" },
-                { "显示", "show" },
+                { L["Hide"], "hide" },
+                { L["Show"], "show" },
             }
         },
         { type = "spacer", height = 1, cols = 24 },
-        { type = "checkbox", key = "hideInCombat", label = "战斗中", cols = 6 },
-        { type = "checkbox", key = "hideOnMount", label = "骑乘时", cols = 6 },
-        { type = "checkbox", key = "hideOnSkyriding", label = "御龙术时", cols = 6 },
-        { type = "checkbox", key = "hideInSpecial", label = "特殊场景时", cols = 6 },
-        { type = "checkbox", key = "hideNoTarget", label = "无目标时", cols = 6 },
+        { type = "checkbox", key = "hideInCombat", label = L["In combat"], cols = 6 },
+        { type = "checkbox", key = "hideOnMount", label = L["While mounted"], cols = 6 },
+        { type = "checkbox", key = "hideOnSkyriding", label = L["While dragonriding"], cols = 6 },
+        { type = "checkbox", key = "hideInSpecial", label = L["In special scenarios"], cols = 6 },
+        { type = "checkbox", key = "hideNoTarget", label = L["No target"], cols = 6 },
     }
 
-    -- 仅BUFF监控显示"BUFF激活时"选项
     if isBuffMonitor then
-        table.insert(items, { type = "checkbox", key = "hideWhenInactive", label = "BUFF未激活时", cols = 6 })
+        table.insert(items, { type = "checkbox", key = "hideWhenInactive", label = L["When BUFF inactive"], cols = 6 })
     end
 
     table.insert(items, { type = "spacer", height = 4, cols = 24 })
-    table.insert(items, { type = "description", text = "特殊场景：载具/宠物对战", cols = 24 })
+    table.insert(items, { type = "description", text = L["Special scenarios: Vehicle/Pet battle"], cols = 24 })
     table.insert(items, { type = "spacer", height = 10, cols = 24 })
 
     return items
@@ -223,14 +223,14 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
     local barColorLabel, rechargeColorLabel
     if isSkill then
         if isChargeSpell then
-            barColorLabel = "已充能颜色"
-            rechargeColorLabel = "充能中颜色"
+            barColorLabel = L["Charged color"]
+            rechargeColorLabel = L["Charging color"]
         else
-            barColorLabel = "就绪时颜色"
-            rechargeColorLabel = "冷却中颜色"
+            barColorLabel = L["Ready color"]
+            rechargeColorLabel = L["Cooldown color"]
         end
     else
-        barColorLabel = "条颜色"
+        barColorLabel = L["Bar color"]
         rechargeColorLabel = nil -- BUFF不需要第二个颜色
     end
 
@@ -240,24 +240,24 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
         if not isSkill and cfg.monitorType == "duration" then
             return SHAPE_OPTIONS
         else
-            return { { "条形", "bar" } }
+            return { { L["Bar"], "bar" } }
         end
     end
 
     return mergeLayouts(
         {
-            { type = "subtitle", text = "基础设置", cols = 24 },
+            { type = "subtitle", text = L["Base Settings"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "checkbox", key = "enabled", label = "启用该技能自定义监控", cols = 12 },
-            { type = "checkbox", key = "hideInCooldownManager", label = "在冷却管理器中隐藏(需RL)", cols = 12 },
-            { type = "checkbox", key = "hideInSystemEditMode", label = "不在系统编辑模式中显示", cols = 12 },
+            { type = "checkbox", key = "enabled", label = L["Enable custom monitor"], cols = 12 },
+            { type = "checkbox", key = "hideInCooldownManager", label = L["Hide in CDM (requires RL)"], cols = 12 },
+            { type = "checkbox", key = "hideInSystemEditMode", label = L["Hide in Edit Mode"], cols = 12 },
         },
         {
-            { type = "dropdown", key = "monitorType", label = "监控类型", cols = 12, items = monitorTypeOptions },
+            { type = "dropdown", key = "monitorType", label = L["Monitor Type"], cols = 12, items = monitorTypeOptions },
             {
                 type = "dropdown",
                 key = "shape",
-                label = "监控形状",
+                label = L["Monitor Shape"],
                 cols = 12,
                 items = getShapeItems,    -- 传递函数，Grid会在渲染时调用
                 dependsOn = "monitorType" -- 依赖monitorType，变化时重新渲染
@@ -265,7 +265,7 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
             {
                 type = "dropdown",
                 key = "frameStrata",
-                label = "图形层级",
+                label = L["Graphics Layer"],
                 cols = 12,
                 items = FRAME_STRATA_OPTIONS
             },
@@ -277,43 +277,43 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                 condition = function(cfg) return cfg.monitorType == "stacks" end,
                 children  = {
                     { type = "spacer", height = 10, cols = 24 },
-                    { type = "subtitle", text = "堆叠层数配置", cols = 24 },
+                    { type = "subtitle", text = L["Stack Config"], cols = 24 },
                     { type = "separator", cols = 24 },
                     {
                         type = "input",
                         key = "maxStacks",
-                        label = "最大层数",
+                        label = L["Max stack count"],
                         cols = 12,
                         numeric = true,
                         labelOnLeft = true
                     },
                     { type = "spacer", height = 4, cols = 24 },
-                    { type = "description", text = "阈值染色（达到该层数时条变色，0=禁用）", cols = 24 },
+                    { type = "description", text = L["Threshold color (bar changes color at this stack, 0=disable)"], cols = 24 },
                     {
                         type = "input",
                         key = "stackThreshold1",
-                        label = "阈值1层数",
+                        label = L["Threshold 1 stack"],
                         cols = 12,
                         numeric = true,
                     },
                     {
                         type = "colorPicker",
                         key = "stackColor1",
-                        label = "阈值1颜色",
+                        label = L["Threshold 1 color"],
                         cols = 12,
                         hasAlpha = true
                     },
                     {
                         type = "input",
                         key = "stackThreshold2",
-                        label = "阈值2层数",
+                        label = L["Threshold 2 stack"],
                         cols = 12,
                         numeric = true,
                     },
                     {
                         type = "colorPicker",
                         key = "stackColor2",
-                        label = "阈值2颜色",
+                        label = L["Threshold 2 color"],
                         cols = 12,
                         hasAlpha = true
                     },
@@ -322,12 +322,12 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
         } or {},
         {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "位置设置", cols = 24 },
+            { type = "subtitle", text = L["Position Settings"], cols = 24 },
             { type = "separator", cols = 24 },
             {
                 type = "slider",
                 key = "x",
-                label = "X坐标",
+                label = L["X coordinate"],
                 min = UI_LIMITS.POSITION.min,
                 max = UI_LIMITS.POSITION.max,
                 step = 1,
@@ -336,7 +336,7 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
             {
                 type = "slider",
                 key = "y",
-                label = "Y坐标",
+                label = L["Y coordinate"],
                 min = UI_LIMITS.POSITION.min,
                 max = UI_LIMITS.POSITION.max,
                 step = 1,
@@ -345,9 +345,9 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
             {
                 type  = "interactiveText",
                 cols  = 24,
-                text  = "可在{编辑模式}中预览和拖拽修改位置",
+                text  = L["Preview and drag in {edit mode} to change position"],
                 links = {
-                    ["编辑模式"] = function()
+                    [L["Edit mode"]] = function()
                         if spellCfg and spellCfg.hideInSystemEditMode then
                             if VFlow.toggleInternalEditMode then
                                 VFlow.toggleInternalEditMode()
@@ -368,12 +368,12 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                 dependsOn = "shape",
                 condition = function(cfg) return cfg.shape == "bar" end,
                 children = {
-                    { type = "subtitle", text = "条形配置", cols = 24 },
+                    { type = "subtitle", text = L["Bar Config"], cols = 24 },
                     { type = "separator", cols = 24 },
                     {
                         type = "slider",
                         key = "barLength",
-                        label = "条长",
+                        label = L["Bar length"],
                         min = UI_LIMITS.BAR_LENGTH.min,
                         max = UI_LIMITS.BAR_LENGTH.max,
                         step = 1,
@@ -382,7 +382,7 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                     {
                         type = "slider",
                         key = "barThickness",
-                        label = "条高",
+                        label = L["Bar height"],
                         min = UI_LIMITS.BAR_THICK.min,
                         max = UI_LIMITS.BAR_THICK.max,
                         step = 1,
@@ -396,12 +396,12 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                 dependsOn = "shape",
                 condition = function(cfg) return cfg.shape == "ring" end,
                 children = {
-                    { type = "subtitle", text = "环形配置", cols = 24 },
+                    { type = "subtitle", text = L["Ring Config"], cols = 24 },
                     { type = "separator", cols = 24 },
                     {
                         type = "slider",
                         key = "ringSize",
-                        label = "环形尺寸",
+                        label = L["Ring size"],
                         min = 20,
                         max = 500,
                         step = 1,
@@ -410,7 +410,7 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                     {
                         type = "dropdown",
                         key = "ringTexture",
-                        label = "环形材质",
+                        label = L["Ring texture"],
                         cols = 12,
                         items = {
                             { "10px", "10" },
@@ -419,7 +419,7 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                             { "40px", "40" },
                         }
                     },
-                    { type = "colorPicker", key = "ringColor", label = "环形颜色", hasAlpha = true, cols = 8 },
+                    { type = "colorPicker", key = "ringColor", label = L["Ring color"], hasAlpha = true, cols = 8 },
                 }
             },
         },
@@ -439,11 +439,11 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                 dependsOn = "shape",
                 condition = function(cfg) return cfg.shape == "bar" end,
                 children = {
-                    { type = "texturePicker", key = "barTexture", label = "条材质", cols = 24 },
+                    { type = "texturePicker", key = "barTexture", label = L["Bar texture"], cols = 24 },
                     {
                         type = "dropdown",
                         key = "barDirection",
-                        label = "方向",
+                        label = L["Direction"],
                         cols = 8,
                         items = BAR_DIRECTION_OPTIONS
                     },
@@ -458,14 +458,14 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                             {
                                 type = "dropdown",
                                 key = "barFillMode",
-                                label = "填充方向",
+                                label = L["Fill direction"],
                                 cols = 8,
                                 items = BAR_FILL_OPTIONS
                             },
                             {
                                 type = "checkbox",
                                 key = "barReverse",
-                                label = "反向",
+                                label = L["Reverse"],
                                 cols = 16,
                             },
                         }
@@ -475,21 +475,21 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
         },
         {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "样式配置", cols = 24 },
+            { type = "subtitle", text = L["Style Config"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "colorPicker", key = "bgColor", label = "背景颜色", hasAlpha = true, cols = 8 },
-            { type = "colorPicker", key = "borderColor", label = "边框颜色", hasAlpha = true, cols = 8 },
+            { type = "colorPicker", key = "bgColor", label = L["Background color"], hasAlpha = true, cols = 8 },
+            { type = "colorPicker", key = "borderColor", label = L["Border color"], hasAlpha = true, cols = 8 },
             {
                 type = "dropdown",
                 key = "borderThickness",
-                label = "边框粗细",
+                label = L["Border thickness"],
                 cols = 8,
                 items = BORDER_THICKNESS_OPTIONS
             },
             {
                 type = "slider",
                 key = "segmentGap",
-                label = "分段间距",
+                label = L["Segment gap"],
                 min = 0,
                 max = 10,
                 step = 1,
@@ -502,9 +502,9 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
         },
         {
             { type = "spacer", height = 10, cols = 24 },
-            { type = "subtitle", text = "技能图标", cols = 24 },
+            { type = "subtitle", text = L["Skill Icon"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "checkbox", key = "showIcon", label = "显示图标", cols = 12 },
+            { type = "checkbox", key = "showIcon", label = L["Show icon"], cols = 12 },
             {
                 type = "if",
                 dependsOn = "showIcon",
@@ -513,7 +513,7 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                     {
                         type = "slider",
                         key = "iconSize",
-                        label = "图标大小",
+                        label = L["Icon size"],
                         min = UI_LIMITS.ICON_SIZE.min,
                         max = UI_LIMITS.ICON_SIZE.max,
                         step = 1,
@@ -522,14 +522,14 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                     {
                         type = "dropdown",
                         key = "iconPosition",
-                        label = "图标位置",
+                        label = L["Icon position"],
                         cols = 12,
                         items = ICON_POSITION_OPTIONS
                     },
                     {
                         type = "slider",
                         key = "iconOffsetX",
-                        label = "X偏移",
+                        label = L["X offset"],
                         min = UI_LIMITS.ICON_OFFSET.min,
                         max = UI_LIMITS.ICON_OFFSET.max,
                         step = 1,
@@ -538,7 +538,7 @@ local function buildSpellConfigLayout(monitorTypeOptions, timerFontLabel, isSkil
                     {
                         type = "slider",
                         key = "iconOffsetY",
-                        label = "Y偏移",
+                        label = L["Y offset"],
                         min = UI_LIMITS.ICON_OFFSET.min,
                         max = UI_LIMITS.ICON_OFFSET.max,
                         step = 1,
@@ -567,7 +567,7 @@ local function renderContent(container, menuKey)
 
     local Grid     = VFlow.Grid
 
-    local title    = UI.title(container, isSkill and "技能监控" or "BUFF监控")
+    local title    = UI.title(container, isSkill and L["Skill Monitor"] or L["BUFF Monitor"])
     title:SetPoint("TOPLEFT", 0, 0)
 
     local bodyFrame = CreateFrame("Frame", nil, container)
@@ -606,7 +606,7 @@ local function renderContent(container, menuKey)
     hintStr:SetPoint("TOPLEFT", 10, -10)
     local dimC = UI.style and UI.style.colors and UI.style.colors.textDim or { 0.6, 0.6, 0.6, 1 }
     hintStr:SetTextColor(dimC[1], dimC[2], dimC[3], 1)
-    hintStr:SetText("← 从左侧选择一个技能/BUFF开始配置")
+    hintStr:SetText(L["← Select a spell/BUFF from the left to configure"])
     hintFrame:Hide()
 
     -- 右侧：刷新配置面板
@@ -622,9 +622,9 @@ local function renderContent(container, menuKey)
         local configPath    = storeKey .. "." .. selectedID
         local monitorTypes  = isSkill and MONITOR_TYPE_SKILL_OPTIONS or MONITOR_TYPE_BUFF_OPTIONS
         local fontLabel     = isSkill
-            and "冷却时间文本样式"
-            or ({ duration = "剩余时间文本样式", stacks = "堆叠层数文本样式" })[spellConfig.monitorType]
-            or "文本样式"
+            and L["Cooldown text style"]
+            or ({ duration = L["Remaining time text style"], stacks = L["Stack count text style"] })[spellConfig.monitorType]
+            or L["Text style"]
 
         local spellInfo     = C_Spell.GetSpellInfo(selectedID)
         local spellName     = spellInfo and spellInfo.name or ("ID: " .. selectedID)
@@ -633,9 +633,9 @@ local function renderContent(container, menuKey)
         local spellTypeDesc = ""
         if isSkill then
             if spellConfig.isChargeSpell then
-                spellTypeDesc = " |cff33dd55[充能技能]|r"
+                spellTypeDesc = " |cff33dd55" .. L["[Charge spell]"] .. "|r"
             else
-                spellTypeDesc = " |cff3399ff[冷却技能]|r"
+                spellTypeDesc = " |cff3399ff" .. L["[Cooldown spell]"] .. "|r"
             end
         end
 
@@ -676,12 +676,12 @@ local function renderContent(container, menuKey)
             table.insert(selectorLayout, {
                 type = "interactiveText",
                 cols = 24,
-                text = "仅可使用{冷却管理器}中追踪的BUFF，{点我重新扫描}。",
+                text = L["Only tracked BUFFs in {cooldown manager} can be used. {Click to rescan}."],
                 links = {
-                    ["冷却管理器"] = function()
+                    [L["Cooldown Manager"]] = function()
                         VFlow.openCooldownManager()
                     end,
-                    ["点我重新扫描"] = function()
+                    [L["Click to rescan"]] = function()
                         if VFlow.BuffScanner then VFlow.BuffScanner.scan() end
                     end,
                 }
@@ -691,7 +691,7 @@ local function renderContent(container, menuKey)
 
         table.insert(selectorLayout, {
             type = "description",
-            text = "|cff3399ff■|r 当前配置  |cff33dd55■|r 已启用",
+            text = "|cff3399ff■|r " .. L["Current"] .. "  |cff33dd55■|r " .. L["Enabled"],
             cols = 24
         })
         table.insert(selectorLayout, { type = "spacer", height = 6, cols = 24 })
@@ -757,7 +757,7 @@ local function renderContent(container, menuKey)
                 tooltip     = function(d)
                     return function(tip)
                         tip:SetSpellByID(d.spellID)
-                        tip:AddLine("|cff00ff00点击配置|r", 1, 1, 1)
+                        tip:AddLine("|cff00ff00" .. L["Click to configure"] .. "|r", 1, 1, 1)
                     end
                 end,
                 onClick     = function(d) onSelect(d.spellID) end,
@@ -767,7 +767,7 @@ local function renderContent(container, menuKey)
         -- 技能监控：手动输入任意技能ID
         if isSkill then
             table.insert(selectorLayout, { type = "spacer", height = 8, cols = 24 })
-            table.insert(selectorLayout, { type = "description", text = "手动输入技能ID：", cols = 24 })
+            table.insert(selectorLayout, { type = "description", text = L["Manual spell ID input:"], cols = 24 })
             table.insert(selectorLayout, {
                 type        = "input",
                 key         = "_manualSpellID",
@@ -778,12 +778,12 @@ local function renderContent(container, menuKey)
             })
             table.insert(selectorLayout, {
                 type    = "button",
-                text    = "添加",
+                text    = L["Add"],
                 cols    = 8,
                 onClick = function(cfg)
                     local sid = tonumber(cfg._manualSpellID)
                     if not sid or sid <= 0 then
-                        print("|cffff0000VFlow:|r 请输入有效的技能ID")
+                        print("|cffff0000VFlow:|r " .. L["Please enter a valid spell ID"])
                         return
                     end
                     local isKnown = (IsPlayerSpell and IsPlayerSpell(sid)) or (IsSpellKnown and IsSpellKnown(sid))
@@ -791,7 +791,7 @@ local function renderContent(container, menuKey)
                     if not isKnown and not trackedSkills[sid] then
                         local si = C_Spell.GetSpellInfo(sid)
                         local name = si and si.name or ("ID: " .. sid)
-                        print("|cffff0000VFlow:|r 技能「" .. name .. "」当前角色不可用，无法添加")
+                        print("|cffff0000VFlow:|r " .. string.format(L["Spell \"%s\" is not available on this character, cannot add"], name))
                         return
                     end
                     onSelect(sid)
@@ -816,7 +816,7 @@ local function renderContent(container, menuKey)
         end
         if canDelete then
             local si = C_Spell.GetSpellInfo(selectedID)
-            local delLabel = "删除「" .. (si and si.name or tostring(selectedID)) .. "」的配置"
+            local delLabel = string.format(L["Delete config for \"%s\""], si and si.name or tostring(selectedID))
             table.insert(selectorLayout, { type = "spacer", height = 8, cols = 24 })
             table.insert(selectorLayout, {
                 type    = "button",
