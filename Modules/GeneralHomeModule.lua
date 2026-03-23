@@ -24,6 +24,17 @@ VFlow.registerModule(MODULE_KEY, {
 
 local CHANGELOG = {
     {
+        version = "0.3.1",
+        date = "2026-03-24",
+        content = {
+            "性能优化",
+            "新增enUS,zhTW语言支持",
+            "自定义图形监控 - 条形监控支持进度反向, 修复垂直布局时的相关bug",
+            "修复技能布局方向选择向上增长时的相关bug",
+
+        }
+    }
+    {
         version = "0.3.0",
         date = "2026-03-22",
         content = {
@@ -52,25 +63,10 @@ local CHANGELOG = {
         }
     },
     {
-        version = "0.1.6",
-        date = "2026-03-19",
-        content = {
-            "修复Buff条相关BUG",
-            "堆叠层数为1时不显示堆叠层数"
-        }
-    },
-    {
         version = "0.1.5",
         date = "2026-03-19",
         content = {
             "修复堆叠文本层级BUG,修复自定义图形监控高占用BUG",
-        }
-    },
-    {
-        version = "0.1.3",
-        date = "2026-03-19",
-        content = {
-            "性能优化, 修复若干BUG",
         }
     },
     {
