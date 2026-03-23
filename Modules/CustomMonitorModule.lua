@@ -172,8 +172,13 @@ local function getOrCreateConfig(store, spellID)
         store[spellID] = getDefaultSpellConfig()
     end
     Utils.applyDefaults(store[spellID], getDefaultSpellConfig())
-    -- 每次获取配置时检测技能类型（确保最新）
-    store[spellID].isChargeSpell = detectChargeSpell(spellID)
+    -- 仅技能监控需要充能判定；BUFF 用同一 spellID 也可能是充能法术，但从不走充能条逻辑，
+    -- 误判会隐藏「填充方向/反向」等条形选项。
+    if store == db.buffs then
+        store[spellID].isChargeSpell = false
+    else
+        store[spellID].isChargeSpell = detectChargeSpell(spellID)
+    end
     return store[spellID]
 end
 

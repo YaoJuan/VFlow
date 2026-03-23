@@ -443,5 +443,5 @@ L["History changelog"] = true
 L["Multilingual support"] = true
 L["Roadmap"] = true
 L["Show history changelog (%d more)"] = true
-L["Sound path example: Interface\\\\AddOns\\\\VFlow\\\\Sounds\\\\alert.ogg"] = true
+L["Sound path example: Interface\\AddOns\\VFlow\\Sounds\\alert.ogg"] = true
 L["Spell \\\"%s\\\" is not available on this character, cannot add"] = true

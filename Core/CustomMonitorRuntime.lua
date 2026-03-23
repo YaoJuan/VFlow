@@ -1540,6 +1540,9 @@ local function DestroyBar(storeKey, spellID)
 end
 
 local function EnsureBar(storeKey, spellID, cfg, container)
+    if storeKey == "buffs" then
+        cfg.isChargeSpell = false
+    end
     local tbl = (storeKey == "skills") and _activeSkillBars or _activeBuffBars
     if tbl[spellID] then DestroyBar(storeKey, spellID) end
 

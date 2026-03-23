@@ -210,9 +210,8 @@ local function InitGroupContainers()
             VFlow.DragFrame.register(container, {
                 label = group.name or ((VFlow.L and VFlow.L["Custom group"] or "Custom group") .. i),
                 onPositionChanged = function(frame, point, x, y)
-                    group.config.x = x
-                    group.config.y = y
-                    VFlow.Store.set(MODULE_KEY, "customGroups", db.customGroups)
+                    VFlow.Store.set(MODULE_KEY, "customGroups." .. i .. ".config.x", x)
+                    VFlow.Store.set(MODULE_KEY, "customGroups." .. i .. ".config.y", y)
                 end,
                 getAnchorOffset = function(frame)
                     local cfg = group.config
