@@ -128,6 +128,16 @@ local function ConfigureStatusBar(bar)
     end
 end
 
+--- 条形监控：布局纵向时须设置 StatusBar 朝向，否则纹理仍从左到右走
+local function ApplyStatusBarOrientation(bar, direction)
+    if not bar or not bar.SetOrientation then return end
+    if direction == "vertical" then
+        bar:SetOrientation("VERTICAL")
+    else
+        bar:SetOrientation("HORIZONTAL")
+    end
+end
+
 local function ResolveBarTexture(name)
     if not name or name == "默认" then return BAR_TEXTURE end
     local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
@@ -736,6 +746,7 @@ local function CreateSegments(barFrame, count, cfg, isStack, isRing)
         seg:SetFrameLevel(baseLevel + 1)
         seg:SetAllPoints(segFrame)
         ConfigureStatusBar(seg)
+        ApplyStatusBarOrientation(seg, dir)
 
         if isStack then
             seg:SetMinMaxValues(i - 1, i)
@@ -763,6 +774,7 @@ local function CreateSegments(barFrame, count, cfg, isStack, isRing)
                 ov1:SetFrameLevel(baseLevel + 2)
                 ov1:SetMinMaxValues((i < t1) and (t1 - 1) or (i - 1), (i < t1) and t1 or i)
                 ConfigureStatusBar(ov1)
+                ApplyStatusBarOrientation(ov1, dir)
                 table.insert(barFrame._thresholdOverlays, ov1)
             end
             if t2 > 0 then
@@ -775,6 +787,7 @@ local function CreateSegments(barFrame, count, cfg, isStack, isRing)
                 ov2:SetFrameLevel(baseLevel + 3)
                 ov2:SetMinMaxValues((i < t2) and (t2 - 1) or (i - 1), (i < t2) and t2 or i)
                 ConfigureStatusBar(ov2)
+                ApplyStatusBarOrientation(ov2, dir)
                 table.insert(barFrame._thresholdOverlays, ov2)
             end
         end
