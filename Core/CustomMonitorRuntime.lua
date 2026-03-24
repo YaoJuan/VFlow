@@ -64,6 +64,9 @@ local function ShouldShowBar(cfg, isBuffActive)
     if cfg.hideInSpecial and (VFlow.State.get("inVehicle") or VFlow.State.get("inPetBattle")) then
         conditionMet = true
     end
+    if cfg.hideNoTarget and not VFlow.State.get("hasTarget") then
+        conditionMet = true
+    end
     if cfg.hideWhenInactive and not isBuffActive then
         conditionMet = true
     end
