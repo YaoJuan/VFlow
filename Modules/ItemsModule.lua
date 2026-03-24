@@ -1,5 +1,5 @@
 --[[ Core 依赖：
-  - Core/ItemGroups.lua：主组/自定义组/追加到技能条等布局与图标
+  - Core/ItemGroups.lua：主组/自定义组/追加到技能条等布局与图标；按组显示条件（VFlow.State）与 hideInCooldownManager
   - Core/ItemAutoData.lua：手动物品与种族等自动数据（查询）
   - Core/ItemsManualOrder.lua：entryOrder 归一化（查询/整理）
   - Core/CooldownStyle.lua：监听 Items 配置并应用样式
@@ -122,6 +122,15 @@ local function getDefaultGroupConfig(anchorFrame, forCustomGroup)
             offsetX = 0,
             offsetY = 0,
         },
+        -- 显示条件（与自定义图形监控技能条目一致，无「BUFF 未激活」项）
+        visibilityMode       = "hide",
+        hideInCombat         = false,
+        hideOnMount          = false,
+        hideOnSkyriding      = false,
+        hideInSpecial        = false,
+        hideNoTarget         = false,
+        hideInCooldownManager = false,
+        hideInSystemEditMode  = false,
     }
 end
 
@@ -257,6 +266,33 @@ end
 -- =========================================================
 
 local mergeLayouts = Utils.mergeLayouts
+
+-- 与 CustomMonitorModule.visibilityGroup(false) 一致（物品组无 hideWhenInactive）
+local function itemsVisibilityGroup()
+    return {
+        { type = "subtitle", text = L["Visibility Conditions"], cols = 24 },
+        { type = "separator", cols = 24 },
+        {
+            type = "dropdown",
+            key = "visibilityMode",
+            label = L["Only when the following conditions"],
+            cols = 12,
+            items = {
+                { L["Hide"], "hide" },
+                { L["Show"], "show" },
+            }
+        },
+        { type = "spacer", height = 1, cols = 24 },
+        { type = "checkbox", key = "hideInCombat", label = L["In combat"], cols = 6 },
+        { type = "checkbox", key = "hideOnMount", label = L["While mounted"], cols = 6 },
+        { type = "checkbox", key = "hideOnSkyriding", label = L["While dragonriding"], cols = 6 },
+        { type = "checkbox", key = "hideInSpecial", label = L["In special scenarios"], cols = 6 },
+        { type = "checkbox", key = "hideNoTarget", label = L["No target"], cols = 6 },
+        { type = "spacer", height = 4, cols = 24 },
+        { type = "description", text = L["Special scenarios: Vehicle/Pet battle"], cols = 24 },
+        { type = "spacer", height = 10, cols = 24 },
+    }
+end
 
 -- 物品/技能选择器
 local function buildItemSpellSelector(groupConfig, options)
@@ -481,6 +517,11 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
         manualReorderPick = nil
     end
 
+    Utils.applyDefaults(groupConfig, getDefaultGroupConfig(
+        options.isCustom and "uiparent" or "player",
+        options.isCustom == true
+    ))
+
     -- 初始化临时字段
     if not groupConfig._inputItemID then groupConfig._inputItemID = "" end
     if not groupConfig._inputSpellID then groupConfig._inputSpellID = "" end
@@ -497,6 +538,8 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
             { type = "subtitle", text = L["Base Settings"], cols = 24 },
             { type = "separator", cols = 24 },
             { type = "checkbox", key = "enabled", label = L["Enable"], cols = 12 },
+            { type = "checkbox", key = "hideInCooldownManager", label = L["Hide in CDM (requires RL)"], cols = 12 },
+            { type = "checkbox", key = "hideInSystemEditMode", label = L["Hide in Edit Mode"], cols = 12 },
             {
                 type = "dropdown",
                 key = "itemZeroCountBehavior",
@@ -679,7 +722,11 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                     { type = "colorPicker", key = "cooldownMaskColor", label = L["Cooldown mask color"], hasAlpha = true, cols = 12 },
                 }
             },
-        }
+        },
+
+        -- 显示条件（各组独立）
+        { { type = "spacer", height = 10, cols = 24 } },
+        itemsVisibilityGroup()
     )
 
     Grid.render(container, layout, groupConfig, MODULE_KEY, configPath)

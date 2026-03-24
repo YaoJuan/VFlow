@@ -53,6 +53,54 @@ local function MarkMapDirty()
     _mapDirty = true
 end
 
+-- =========================================================
+-- 显示条件
+-- =========================================================
+
+local function IsHiddenForSystemEditOnly(cfg)
+    if not cfg or not cfg.hideInSystemEditMode then return false end
+    local sys = VFlow.State.systemEditMode or false
+    local internal = VFlow.State.internalEditMode or false
+    return sys and not internal
+end
+
+local function ShouldShowItemGroup(cfg)
+    if not cfg or cfg.enabled == false then return false end
+    local mode = cfg.visibilityMode or "hide"
+    local conditionMet = false
+    if cfg.hideInCombat and VFlow.State.get("inCombat") then
+        conditionMet = true
+    end
+    if cfg.hideOnMount and VFlow.State.get("isMounted") then
+        conditionMet = true
+    end
+    if cfg.hideOnSkyriding and VFlow.State.get("isSkyriding") then
+        conditionMet = true
+    end
+    if cfg.hideInSpecial and (VFlow.State.get("inVehicle") or VFlow.State.get("inPetBattle")) then
+        conditionMet = true
+    end
+    if cfg.hideNoTarget and not VFlow.State.get("hasTarget") then
+        conditionMet = true
+    end
+    local visible
+    if mode == "show" then
+        visible = conditionMet
+    else
+        visible = not conditionMet
+    end
+    if not visible then return false end
+    if IsHiddenForSystemEditOnly(cfg) then return false end
+    return true
+end
+
+local function ScheduleVisibilityDrivenRefresh()
+    ScheduleStandaloneRefresh()
+    if VFlow.RequestCooldownStyleRefresh then
+        VFlow.RequestCooldownStyleRefresh()
+    end
+end
+
 local function ResolveManualItemForTracking(configItemID)
     local IAD = VFlow.ItemAutoData
     if IAD and IAD.resolveManualInventoryItem then
@@ -213,12 +261,16 @@ local function ProcessSkillViewerIcons(viewer, mainVisible)
         local hideStandalone = gid ~= nil and cfg and ShouldStandaloneExtract(cfg)
         local hideAppend = gid ~= nil and cfg and ShouldAppendToViewer(cfg, viewer)
 
-        if hideStandalone or hideAppend then
+        local hideInCDM = cfg and cfg.hideInCooldownManager
+        if hideStandalone or hideAppend or hideInCDM then
             if hideStandalone then
                 icon._vf_itemStandaloneHidden = true
             end
             if hideAppend then
                 icon._vf_itemAppendHidden = true
+            end
+            if hideInCDM then
+                icon._vf_itemHideInCDM = true
             end
             if icon.Hide then icon:Hide() end
             if icon.SetAlpha then icon:SetAlpha(0) end
@@ -230,6 +282,11 @@ local function ProcessSkillViewerIcons(viewer, mainVisible)
             end
             if icon._vf_itemAppendHidden then
                 icon._vf_itemAppendHidden = nil
+                if icon.Show then icon:Show() end
+                if icon.SetAlpha then icon:SetAlpha(1) end
+            end
+            if icon._vf_itemHideInCDM then
+                icon._vf_itemHideInCDM = nil
                 if icon.Show then icon:Show() end
                 if icon.SetAlpha then icon:SetAlpha(1) end
             end
@@ -450,12 +507,14 @@ end
 
 local function BuildStandaloneEntries(cfg)
     if not ShouldStandaloneExtract(cfg) then return {} end
+    if not ShouldShowItemGroup(cfg) then return {} end
     return BuildTrackedEntries(cfg)
 end
 
 local function BuildAppendEntries(cfg)
     if not cfg or cfg.enabled == false then return {} end
     if cfg.displayMode ~= "append_important" and cfg.displayMode ~= "append_efficiency" then return {} end
+    if not ShouldShowItemGroup(cfg) then return {} end
     return BuildTrackedEntries(cfg)
 end
 
@@ -1280,6 +1339,24 @@ end)
 VFlow.State.watch("isEditMode", "ItemGroups_StandalonePreview", function()
     ScheduleStandaloneRefresh()
 end)
+
+do
+    local visKeys = {
+        "inCombat",
+        "isMounted",
+        "isSkyriding",
+        "inVehicle",
+        "inPetBattle",
+        "hasTarget",
+        "systemEditMode",
+        "internalEditMode",
+    }
+    for _, k in ipairs(visKeys) do
+        VFlow.State.watch(k, "ItemGroups_Vis", function()
+            ScheduleVisibilityDrivenRefresh()
+        end)
+    end
+end
 
 VFlow.on("PLAYER_EQUIPMENT_CHANGED", "ItemGroups", function(_, slotID)
     if slotID ~= nil and slotID ~= 13 and slotID ~= 14 then return end
