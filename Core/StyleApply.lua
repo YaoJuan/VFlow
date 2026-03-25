@@ -518,7 +518,7 @@ local function ApplyBorder(button)
     b:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", anchorOffsetX, -anchorOffsetY)
 end
 
--- GCD 转圈隐藏
+-- GCD 转圈隐藏：仅剥 isOnGCD；充能恢复中 GetSpellChargeDuration 有值时不剥（避免误伤充能圈）
 local pendingHideGcdButtons = {}
 local hideGcdFlushFrame = CreateFrame("Frame")
 hideGcdFlushFrame:Hide()
@@ -585,6 +585,12 @@ local function ApplyHideGcdSwipeIfNeeded(button)
     if not cd or not cd.IsShown or not cd:IsShown() then return end
     local spellID = GetButtonSpellIDForGcd(button)
     if not spellID then return end
+    if C_Spell and C_Spell.GetSpellChargeDuration then
+        local okCh, chargeDur = pcall(function()
+            return C_Spell.GetSpellChargeDuration(spellID)
+        end)
+        if okCh and chargeDur ~= nil then return end
+    end
     local ok, cooldown = pcall(function()
         return C_Spell.GetSpellCooldown(spellID)
     end)
