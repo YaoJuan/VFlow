@@ -90,12 +90,6 @@ local function CollectBuffBarFrames(viewer)
     if not viewer then
         return {}
     end
-    local childN = select("#", viewer:GetChildren())
-    local poolN = StyleLayout.PoolActiveCount(viewer.itemFramePool)
-    local cached = viewer._vf_bb_frames_cached
-    if cached and viewer._vf_bb_frames_cn == childN and viewer._vf_bb_frames_pn == poolN then
-        return cached
-    end
     local frames = {}
     if viewer.itemFramePool then
         for frame in viewer.itemFramePool:EnumerateActive() do
@@ -111,9 +105,6 @@ local function CollectBuffBarFrames(viewer)
         end
     end
     Utils.sortByLayoutIndex(frames)
-    viewer._vf_bb_frames_cached = frames
-    viewer._vf_bb_frames_cn = childN
-    viewer._vf_bb_frames_pn = poolN
     return frames
 end
 
@@ -722,11 +713,15 @@ local function RefreshBuffBarViewer(viewer, cfg)
     local growDir = cfg.growDirection or "DOWN"
 
     if count == 0 then
+        viewer:SetSize(math.max(1, width), math.max(1, height))
         viewer._vf_refreshing = false
         Profiler.stop(_pt)
         StyleLayout.InvalidateCollectIconsCache(viewer)
         return true
     end
+
+    local containerHeight = (count * height) + ((count - 1) * spacing)
+    viewer:SetSize(width, math.max(height, containerHeight))
 
     -- 2. 对每个帧：样式 → 定位 → 显示
     for i = 1, count do
@@ -739,9 +734,9 @@ local function RefreshBuffBarViewer(viewer, cfg)
         -- 定位
         frame:ClearAllPoints()
         if growDir == "UP" then
-            frame:SetPoint("BOTTOMLEFT", viewer, "BOTTOMLEFT", 0, offset)
+            frame:SetPoint("BOTTOM", viewer, "BOTTOM", 0, offset)
         else
-            frame:SetPoint("TOPLEFT", viewer, "TOPLEFT", 0, -offset)
+            frame:SetPoint("TOP", viewer, "TOP", 0, -offset)
         end
 
         -- 确保可见
@@ -1413,14 +1408,10 @@ local function SetupBuffBarRuntimeHandlers()
             return cfg
         end,
         collectVisible = function(viewer, isDirty)
-            local frames = CollectBuffBarFrames(viewer)
-            local visible = {}
-            for i = 1, #frames do
-                if frames[i]:IsShown() then
-                    visible[#visible + 1] = frames[i]
-                end
+            if isDirty then
+                StyleLayout.InvalidateCollectIconsCache(viewer)
             end
-            return visible
+            return CollectBuffBarFrames(viewer)
         end,
         refresh = function(viewer, cfg)
             RefreshBuffBarViewer(viewer, cfg)
