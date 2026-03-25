@@ -697,6 +697,22 @@ local function ApplyVisualHides(button)
     end
 end
 
+function StyleApply.ApplyViewerItemVisualHides(itemFrame)
+    if not itemFrame then return end
+    RefreshStyleCache()
+    ApplyVisualHides(itemFrame)
+    local icon = itemFrame.Icon
+    if icon and icon ~= itemFrame then
+        ApplyVisualHides(icon)
+    end
+    if styleCache.hideIconGCD then
+        QueueHideGcdSwipeApply(itemFrame)
+        if icon and icon ~= itemFrame then
+            QueueHideGcdSwipeApply(icon)
+        end
+    end
+end
+
 -- =========================================================
 -- SECTION 10: ApplyBeautify 主入口
 -- =========================================================

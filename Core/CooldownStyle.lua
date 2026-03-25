@@ -463,6 +463,9 @@ end
 local function ApplyBuffBarFrameStyle(frame, cfg, frameWidth, frameHeight)
     if not frame or not cfg then return end
 
+    -- 行帧不走路径 ApplyButtonStyle；需同步图标样式的 Debuff 红框 / 播疫 / CD 动画等隐藏（见 StyleApply.ApplyViewerItemVisualHides）
+    StyleApply.ApplyViewerItemVisualHides(frame)
+
     local barStyleVer = BuffBarRuntime and BuffBarRuntime.getStyleVersion() or 0
     local iconPosition = cfg.iconPosition or "LEFT"
 
@@ -1919,4 +1922,5 @@ end)
 VFlow.Store.watch("VFlow.StyleIcon", "CooldownStyle_StyleIcon", function(key, value)
     BumpButtonStyleVersion()
     RequestRefresh(0)
+    RequestBuffBarRefresh()
 end)
