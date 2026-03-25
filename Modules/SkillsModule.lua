@@ -41,6 +41,28 @@ local ROW_ANCHOR_OPTIONS = {
     { L["Right-aligned"], "right" },
 }
 
+local STANDALONE_ANCHOR_FRAME_OPTIONS = {
+    { L["UI parent"], "uiparent" },
+    { L["Player frame"], "player" },
+    { L["Important skills bar"], "essential" },
+    { L["Efficiency skills bar"], "utility" },
+}
+
+local RELATIVE_ANCHOR_POINT_OPTIONS = {
+    { L["CENTER"], "CENTER" },
+    { L["TOP"], "TOP" },
+    { L["BOTTOM"], "BOTTOM" },
+    { L["LEFT"], "LEFT" },
+    { L["RIGHT"], "RIGHT" },
+}
+
+local PLAYER_ANCHOR_CORNER_OPTIONS = {
+    { L["Top-left"], "TOPLEFT" },
+    { L["Top-right"], "TOPRIGHT" },
+    { L["Bottom-left"], "BOTTOMLEFT" },
+    { L["Bottom-right"], "BOTTOMRIGHT" },
+}
+
 -- =========================================================
 -- SECTION 3: 默认配置
 -- =========================================================
@@ -61,6 +83,9 @@ local function getDefaultGroupConfig()
         showKeybind = false,
         vertical = false,
         spellIDs = {},
+        anchorFrame = "uiparent",
+        relativePoint = "CENTER",
+        playerAnchorPosition = "BOTTOMLEFT",
         x = 0,
         y = 0,
         _dataVersion = 0,
@@ -273,6 +298,7 @@ end
 local function renderGroupConfig(container, groupConfig, groupName, options)
     local Grid = VFlow.Grid
     options = options or {}
+    Utils.applyDefaults(groupConfig, getDefaultGroupConfig())
 
     local layout = mergeLayouts(
         {
@@ -336,15 +362,74 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
             { type = "checkbox", key = "showKeybind", label = L["Show keybind"], cols = 12 },
         },
 
-        -- 自定义组：位置设置
+        -- 自定义组：依附框体与位置
         options.isCustom and {
             { type = "spacer", height = 10, cols = 24 },
             { type = "subtitle", text = L["Position Settings"], cols = 24 },
             { type = "separator", cols = 24 },
-            { type = "slider", key = "x", label = L["X coordinate"],
-              min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
-            { type = "slider", key = "y", label = L["Y coordinate"],
-              min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
+            {
+                type = "dropdown",
+                key = "anchorFrame",
+                label = L["Attached frame"],
+                cols = 12,
+                items = STANDALONE_ANCHOR_FRAME_OPTIONS,
+            },
+            {
+                type = "if",
+                dependsOn = "anchorFrame",
+                condition = function(cfg) return cfg.anchorFrame == "player" end,
+                children = {
+                    {
+                        type = "dropdown",
+                        key = "playerAnchorPosition",
+                        label = L["Anchor point"],
+                        cols = 12,
+                        items = PLAYER_ANCHOR_CORNER_OPTIONS,
+                    },
+                },
+            },
+            {
+                type = "if",
+                dependsOn = "anchorFrame",
+                condition = function(cfg)
+                    local af = cfg.anchorFrame
+                    return af == "uiparent" or af == "essential" or af == "utility"
+                end,
+                children = {
+                    {
+                        type = "dropdown",
+                        key = "relativePoint",
+                        label = L["Anchor point"],
+                        cols = 12,
+                        items = RELATIVE_ANCHOR_POINT_OPTIONS,
+                    },
+                },
+            },
+            {
+                type = "if",
+                dependsOn = "anchorFrame",
+                condition = function(cfg) return cfg.anchorFrame == "player" end,
+                children = {
+                    { type = "slider", key = "x", label = L["X offset"],
+                      min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
+                    { type = "slider", key = "y", label = L["Y offset"],
+                      min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
+                },
+            },
+            {
+                type = "if",
+                dependsOn = "anchorFrame",
+                condition = function(cfg)
+                    local af = cfg.anchorFrame
+                    return af == "uiparent" or af == "essential" or af == "utility"
+                end,
+                children = {
+                    { type = "slider", key = "x", label = L["X coordinate"],
+                      min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
+                    { type = "slider", key = "y", label = L["Y coordinate"],
+                      min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
+                },
+            },
             { type = "description", text = L["Tip: Drag in Edit Mode to change position"], cols = 24 },
         },
 

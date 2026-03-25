@@ -189,21 +189,24 @@ local function EnsureGroupContainer(groupIdx)
     container:SetMovable(true)
     container:SetClampedToScreen(true)
 
-    -- 应用保存的位置
-    local x = group.config.x or 0
-    local y = group.config.y or (-200 - (groupIdx - 1) * 60)
-    container:ClearAllPoints()
-    container:SetPoint("CENTER", UIParent, "CENTER", x, y)
+    VFlow.ContainerAnchor.ApplyFramePosition(container, group.config, nil)
 
-    -- 注册拖拽
     VFlow.DragFrame.register(container, {
         label = group.name or ((VFlow.L and VFlow.L["Custom skill group"] or "Custom skill group") .. groupIdx),
-        onPositionChanged = function(frame, point, x, y)
+        getAnchorConfig = function()
+            return group.config
+        end,
+        onPositionChanged = function(_, kind, x, y)
+            if kind ~= "PLAYER_ANCHOR" and kind ~= "SYMMETRIC" then return end
             group.config.x = x
             group.config.y = y
             VFlow.Store.set(MODULE_KEY, "customGroups", db.customGroups)
         end,
     })
+
+    if VFlow.DragFrame.applyRegisteredPosition then
+        VFlow.DragFrame.applyRegisteredPosition(container)
+    end
 
     _groupContainers[groupIdx] = container
     return container
@@ -469,22 +472,24 @@ VFlow.Store.watch(MODULE_KEY, "SkillGroups", function(key, value)
         InitGroupContainers()
     end
 
-    -- 如果是x或y坐标变化，更新容器位置（不重新初始化）
-    if key:find("%.x$") or key:find("%.y$") then
+    -- 坐标或依附关系变化：只更新容器锚点
+    if key:find("customGroups%.%d+%.config%.") then
         local groupIndex = tonumber(key:match("customGroups%.(%d+)%."))
-        if groupIndex then
+        if groupIndex and (
+            key:find("%.x$") or key:find("%.y$")
+            or key:find("%.anchorFrame$") or key:find("%.relativePoint$") or key:find("%.playerAnchorPosition$")
+        ) then
             local container = _groupContainers[groupIndex]
             local db = VFlow.getDB(MODULE_KEY)
-            if container and db and db.customGroups[groupIndex] then
-                local group = db.customGroups[groupIndex]
-                local x = group.config.x or 0
-                local y = group.config.y or (-200 - (groupIndex - 1) * 60)
-                container:ClearAllPoints()
-                container:SetPoint("CENTER", UIParent, "CENTER", x, y)
+            if container and db and db.customGroups[groupIndex] and db.customGroups[groupIndex].config then
+                if VFlow.DragFrame and VFlow.DragFrame.applyRegisteredPosition then
+                    VFlow.DragFrame.applyRegisteredPosition(container)
+                else
+                    VFlow.ContainerAnchor.ApplyFramePosition(container, db.customGroups[groupIndex].config, nil)
+                end
             end
+            return
         end
-        -- x/y变化不需要触发其他刷新，直接返回
-        return
     end
 
     -- 其他配置变化：标记映射表需要重建

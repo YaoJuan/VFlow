@@ -41,6 +41,16 @@ local DISPLAY_MODE_OPTIONS = {
 local ANCHOR_FRAME_OPTIONS = {
     { L["Player frame"], "player" },
     { L["UI parent"], "uiparent" },
+    { L["Important skills bar"], "essential" },
+    { L["Efficiency skills bar"], "utility" },
+}
+
+local RELATIVE_ANCHOR_POINT_OPTIONS = {
+    { L["CENTER"], "CENTER" },
+    { L["TOP"], "TOP" },
+    { L["BOTTOM"], "BOTTOM" },
+    { L["LEFT"], "LEFT" },
+    { L["RIGHT"], "RIGHT" },
 }
 
 local PLAYER_ANCHOR_POSITION_OPTIONS = {
@@ -86,6 +96,7 @@ local function getDefaultGroupConfig(anchorFrame, forCustomGroup)
         enabled = true,
         displayMode = "standalone",
         anchorFrame = anchorFrame or "player",
+        relativePoint = "CENTER",
         playerAnchorPosition = "BOTTOMLEFT",
         x = 0,
         y = 0,
@@ -630,7 +641,7 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
                     {
                         type = "dropdown",
                         key = "playerAnchorPosition",
-                        label = L["Position"],
+                        label = L["Anchor point"],
                         cols = 12,
                         items = PLAYER_ANCHOR_POSITION_OPTIONS
                     },
@@ -642,13 +653,24 @@ local function renderGroupConfig(container, groupConfig, groupName, options)
             },
         },
 
-        -- UI父框体坐标选项（仅在单独分组且依附UI父框体时显示）
+        -- UI父框体 / 重要条 / 效能条：锚点与坐标（单独分组）
         {
             {
                 type = "if",
                 dependsOn = { "displayMode", "anchorFrame" },
-                condition = function(cfg) return cfg.displayMode == "standalone" and cfg.anchorFrame == "uiparent" end,
+                condition = function(cfg)
+                    if cfg.displayMode ~= "standalone" then return false end
+                    local af = cfg.anchorFrame
+                    return af == "uiparent" or af == "essential" or af == "utility"
+                end,
                 children = {
+                    {
+                        type = "dropdown",
+                        key = "relativePoint",
+                        label = L["Anchor point"],
+                        cols = 12,
+                        items = RELATIVE_ANCHOR_POINT_OPTIONS,
+                    },
                     { type = "slider", key = "x", label = L["X coordinate"],
                       min = UI_LIMITS.POSITION.min, max = UI_LIMITS.POSITION.max, step = 1, cols = 12 },
                     { type = "slider", key = "y", label = L["Y coordinate"],

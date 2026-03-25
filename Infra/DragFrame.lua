@@ -34,37 +34,10 @@ local function roundOffset(val)
     end
 end
 
--- 计算相对于CENTER的偏移
-local function getCenterOffset(frame)
-    local parent = UIParent
+local CA = VFlow.ContainerAnchor
 
-    local scale = frame:GetScale()
-    if not scale or scale == 0 then return 0, 0 end
-
-    local left = frame:GetLeft()
-    local right = frame:GetRight()
-    local top = frame:GetTop()
-    local bottom = frame:GetBottom()
-
-    if not (left and right and top and bottom) then
-        return 0, 0
-    end
-
-    left = left * scale
-    right = right * scale
-    top = top * scale
-    bottom = bottom * scale
-
-    local parentWidth, parentHeight = parent:GetSize()
-    if not parentWidth or not parentHeight then
-        return 0, 0
-    end
-
-    -- 计算框架中心相对于父框架中心的偏移
-    local cx = (left + right) * 0.5 - parentWidth * 0.5
-    local cy = (bottom + top) * 0.5 - parentHeight * 0.5
-
-    return cx / scale, cy / scale
+local function getEffectiveAnchorConfig(options)
+    return CA.NormalizeAnchorConfig(options.getAnchorConfig())
 end
 
 -- =========================================================
@@ -101,52 +74,8 @@ local function createSelection(frame, options)
     return selection
 end
 
---- @param silent boolean|nil 为 true 时不回调 onPositionChanged（避免 Store 监听里再次 apply 形成死循环）
-local function applyCenterPosition(frame, options, x, y, silent)
-    if options.getAnchorOffset then
-        local offsetX, offsetY = options.getAnchorOffset(frame)
-        if offsetX and offsetY then
-            x = x + offsetX
-            y = y + offsetY
-        end
-    end
-
-    x = roundOffset(x)
-    y = roundOffset(y)
-
-    frame:ClearAllPoints()
-    frame:SetPoint("CENTER", UIParent, "CENTER", x, y)
-
-    if not silent and options.onPositionChanged then
-        options.onPositionChanged(frame, "CENTER", x, y)
-    end
-end
-
-local function resolvePlayerAnchorPoint(options)
-    local ap = options.playerAnchorPoint
-    if type(ap) == "function" then
-        return ap()
-    end
-    return ap or "TOPLEFT"
-end
-
-local function resolvePlayerAnchorTarget(options)
-    if options.getPlayerAnchorFrame then
-        return options.getPlayerAnchorFrame()
-    end
-    if VFlow.PlayerAnchor and VFlow.PlayerAnchor.ResolvePlayerFrame then
-        return VFlow.PlayerAnchor.ResolvePlayerFrame()
-    end
-    return nil
-end
-
---- @param silent boolean|nil 为 true 时不回调 onPositionChanged
-local function applyPlayerAnchorPosition(frame, options, ox, oy, silent)
-    local PA = VFlow.PlayerAnchor
-    if not PA or not PA.ApplyContainerToPlayer then
-        return
-    end
-    local playerPoint = resolvePlayerAnchorPoint(options)
+local function applySymmetricPosition(frame, options, cfg, x, y, silent)
+    local ox, oy = x, y
     if options.getAnchorOffset then
         local ax, ay = options.getAnchorOffset(frame)
         if ax and ay then
@@ -156,28 +85,60 @@ local function applyPlayerAnchorPosition(frame, options, ox, oy, silent)
     end
     ox = roundOffset(ox)
     oy = roundOffset(oy)
-    PA.ApplyContainerToPlayer(frame, playerPoint, ox, oy)
+    local target = CA.ResolveSymmetricTarget(cfg)
+    local myPt, theirPt = CA.GetSymmetricSetPoints(cfg)
+    frame:ClearAllPoints()
+    frame:SetPoint(myPt, target, theirPt, ox, oy)
+    if not silent and options.onPositionChanged then
+        options.onPositionChanged(frame, "SYMMETRIC", ox, oy)
+    end
+end
+
+local function applyPlayerAnchorPosition(frame, options, cfg, ox, oy, silent)
+    local playerPoint = cfg.playerAnchorPosition
+    if options.getAnchorOffset then
+        local ax, ay = options.getAnchorOffset(frame)
+        if ax and ay then
+            ox = ox + ax
+            oy = oy + ay
+        end
+    end
+    ox = roundOffset(ox)
+    oy = roundOffset(oy)
+    CA.ApplyContainerToPlayer(frame, playerPoint, ox, oy)
     if not silent and options.onPositionChanged then
         options.onPositionChanged(frame, "PLAYER_ANCHOR", ox, oy)
     end
 end
 
-local function getOffsetsFromOptions(options)
-    if options.getStoredOffsets then
-        return options.getStoredOffsets()
+local function updateDragOverlayPositionLabel(frame)
+    local data = frame and _registry[frame]
+    if not data or not data.selection or not data.options then return end
+    if not VFlow.State.isEditMode then return end
+    local selection, options = data.selection, data.options
+    local eff = getEffectiveAnchorConfig(options)
+    if eff.anchorFrame == "player" then
+        local target = CA.ResolvePlayerFrame()
+        if target then
+            local ox, oy = CA.ComputePlayerAnchorOffsets(frame, target, eff.playerAnchorPosition)
+            selection.label:SetFormattedText("偏移: %.0f, %.0f", ox, oy)
+        else
+            selection.label:SetText(options.label or "无玩家框体")
+        end
+    else
+        local target = CA.ResolveSymmetricTarget(eff)
+        local ox, oy = CA.ComputeStoredOffset(frame, target, eff)
+        selection.label:SetFormattedText("%s: %.0f, %.0f", eff.relativePoint, ox, oy)
     end
-    if options.mode == "player_anchor" then
-        return options.storedOffsetX or 0, options.storedOffsetY or 0
-    end
-    return options.storedCenterX or 0, options.storedCenterY or 0
 end
 
 local function applyStoredPosition(frame, options)
-    local a, b = getOffsetsFromOptions(options)
-    if options.mode == "player_anchor" then
-        applyPlayerAnchorPosition(frame, options, a, b, true)
+    local eff = getEffectiveAnchorConfig(options)
+    local x, y = eff.x, eff.y
+    if eff.anchorFrame == "player" then
+        applyPlayerAnchorPosition(frame, options, eff, eff.x, eff.y, true)
     else
-        applyCenterPosition(frame, options, a, b, true)
+        applySymmetricPosition(frame, options, eff, eff.x, eff.y, true)
     end
 end
 
@@ -186,22 +147,22 @@ local function nudgeSelectedFrame(frame, options, dx, dy)
     if not VFlow.State.isEditMode then return end
     if _selectedFrame ~= frame then return end
 
-    if options.mode == "player_anchor" then
-        local target = resolvePlayerAnchorTarget(options)
-        local PA = VFlow.PlayerAnchor
-        if not target or not PA or not PA.ComputePlayerAnchorOffsets then return end
-        local playerPoint = resolvePlayerAnchorPoint(options)
-        local ox, oy = PA.ComputePlayerAnchorOffsets(frame, target, playerPoint)
-        applyPlayerAnchorPosition(frame, options, ox + dx, oy + dy)
+    local eff = getEffectiveAnchorConfig(options)
+    if eff.anchorFrame == "player" then
+        local target = CA.ResolvePlayerFrame()
+        if not target then return end
+        local ox, oy = CA.ComputePlayerAnchorOffsets(frame, target, eff.playerAnchorPosition)
+        applyPlayerAnchorPosition(frame, options, eff, ox + dx, oy + dy)
     else
-        local x, y = getCenterOffset(frame)
-        applyCenterPosition(frame, options, x + dx, y + dy)
+        local target = CA.ResolveSymmetricTarget(eff)
+        local ox, oy = CA.ComputeStoredOffset(frame, target, eff)
+        applySymmetricPosition(frame, options, eff, ox + dx, oy + dy)
     end
+    updateDragOverlayPositionLabel(frame)
 end
 
 local updateAllSelections
 
---- 仅暴雪系统编辑开启、且未开内部编辑时，按注册项配置隐藏拖拽选择层（自定义图形监控等）
 local function frameEditOverlaySuppressed(data)
     if not data or not data.options then return false end
     local fn = data.options.suppressSystemEditPreview
@@ -246,20 +207,8 @@ local function beginDrag(selection, frame, options)
 
     frame:StartMoving()
 
-    selection:SetScript("OnUpdate", function(self)
-        if options.mode == "player_anchor" then
-            local target = resolvePlayerAnchorTarget(options)
-            local PA = VFlow.PlayerAnchor
-            if target and PA and PA.ComputePlayerAnchorOffsets then
-                local ox, oy = PA.ComputePlayerAnchorOffsets(frame, target, resolvePlayerAnchorPoint(options))
-                self.label:SetFormattedText("偏移: %.0f, %.0f", ox, oy)
-            else
-                self.label:SetText(options.label or "无玩家框体")
-            end
-        else
-            local x, y = getCenterOffset(frame)
-            self.label:SetFormattedText("CENTER: %.0f, %.0f", x, y)
-        end
+    selection:SetScript("OnUpdate", function()
+        updateDragOverlayPositionLabel(frame)
     end)
 end
 
@@ -267,19 +216,20 @@ local function endDrag(selection, frame, options)
     frame:StopMovingOrSizing()
     selection:SetScript("OnUpdate", nil)
 
-    if options.mode == "player_anchor" then
-        local target = resolvePlayerAnchorTarget(options)
-        local PA = VFlow.PlayerAnchor
-        if target and PA and PA.ComputePlayerAnchorOffsets then
-            local ox, oy = PA.ComputePlayerAnchorOffsets(frame, target, resolvePlayerAnchorPoint(options))
-            applyPlayerAnchorPosition(frame, options, ox, oy)
+    local eff = getEffectiveAnchorConfig(options)
+    if eff.anchorFrame == "player" then
+        local target = CA.ResolvePlayerFrame()
+        if target then
+            local ox, oy = CA.ComputePlayerAnchorOffsets(frame, target, eff.playerAnchorPosition)
+            applyPlayerAnchorPosition(frame, options, eff, ox, oy)
         end
     else
-        local x, y = getCenterOffset(frame)
-        applyCenterPosition(frame, options, x, y)
+        local target = CA.ResolveSymmetricTarget(eff)
+        local ox, oy = CA.ComputeStoredOffset(frame, target, eff)
+        applySymmetricPosition(frame, options, eff, ox, oy)
     end
 
-    selection.label:SetText(options.label or frame:GetName() or "Frame")
+    updateDragOverlayPositionLabel(frame)
 end
 
 -- =========================================================
@@ -293,10 +243,14 @@ local function showHighlighted(selection, options)
     selection:Show()
 end
 
-local function showSelected(selection, options)
+local function showSelected(selection, options, frame)
     selection:SetBackdropColor(1.00, 0.75, 0.05, 0.10)       -- 金色背景
     selection:SetBackdropBorderColor(1.00, 0.82, 0.10, 0.95) -- 金色边框
-    selection.label:SetText(options.label or "Frame")
+    if frame then
+        updateDragOverlayPositionLabel(frame)
+    else
+        selection.label:SetText(options.label or "Frame")
+    end
     selection:Show()
 end
 
@@ -327,7 +281,7 @@ updateAllSelections = function()
             local isSelected = (_selectedFrame == frame)
             data.selection:EnableKeyboard(isSelected)
             if isSelected then
-                showSelected(data.selection, data.options)
+                showSelected(data.selection, data.options, frame)
             else
                 showHighlighted(data.selection, data.options)
             end
@@ -356,6 +310,9 @@ function VFlow.DragFrame.register(frame, options)
     if not frame then return end
 
     options = options or {}
+    if type(options.getAnchorConfig) ~= "function" then
+        error("VFlow.DragFrame.register: options.getAnchorConfig is required")
+    end
 
     -- 创建选择框
     local selection = createSelection(frame, options)
@@ -374,7 +331,7 @@ function VFlow.DragFrame.register(frame, options)
     selection:SetScript("OnEnter", function(self)
         if VFlow.State.isEditMode then
             if _selectedFrame == frame then
-                showSelected(selection, options)
+                showSelected(selection, options, frame)
             else
                 showHighlighted(selection, options)
             end
@@ -384,7 +341,7 @@ function VFlow.DragFrame.register(frame, options)
     selection:SetScript("OnLeave", function(self)
         if VFlow.State.isEditMode then
             if _selectedFrame == frame then
-                showSelected(selection, options)
+                showSelected(selection, options, frame)
             else
                 showHighlighted(selection, options)
             end
@@ -475,15 +432,6 @@ function VFlow.DragFrame.toggleInternalEditMode()
     VFlow.DragFrame.setInternalEditMode(not (VFlow.State.internalEditMode or false))
 end
 
--- 应用保存的位置（UIParent CENTER 模式）
-function VFlow.DragFrame.applyPosition(frame, point, x, y)
-    if not frame then return end
-
-    frame:ClearAllPoints()
-    frame:SetPoint(point or "CENTER", UIParent, point or "CENTER", x or 0, y or 0)
-end
-
---- 由业务层在注册后根据配置刷新位置（player_anchor / 默认 center）
 function VFlow.DragFrame.applyRegisteredPosition(frame)
     local data = frame and _registry[frame]
     if not data or not data.options then return end

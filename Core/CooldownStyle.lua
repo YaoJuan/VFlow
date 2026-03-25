@@ -1879,6 +1879,10 @@ end)
 
 -- 监听技能模块配置变更
 VFlow.Store.watch("VFlow.Skills", "CooldownStyle_Skills", function(key, value)
+    if key:find("%.x$") or key:find("%.y$")
+        or key:find("%.anchorFrame$") or key:find("%.relativePoint$") or key:find("%.playerAnchorPosition$") then
+        return
+    end
     BumpButtonStyleVersion()
     RequestRefresh(0)
 end)
@@ -1886,8 +1890,9 @@ end)
 -- 监听BUFF模块配置变更
 VFlow.Store.watch("VFlow.Buffs", "CooldownStyle_Buffs", function(key, value)
     InvalidateDBCache()
-    -- x/y坐标变化不需要触发样式引擎刷新
-    if key:find("%.x$") or key:find("%.y$") then
+    -- 仅容器位置/依附变化：不触发样式引擎刷新
+    if key:find("%.x$") or key:find("%.y$")
+        or key:find("%.anchorFrame$") or key:find("%.relativePoint$") or key:find("%.playerAnchorPosition$") then
         return
     end
     BumpButtonStyleVersion()

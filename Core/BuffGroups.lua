@@ -202,14 +202,15 @@ local function InitGroupContainers()
             container:SetMovable(true)
             container:SetClampedToScreen(true)
 
-            local x = group.config.x or 0
-            local y = group.config.y or (-260 - (i - 1) * 60)
-            container:ClearAllPoints()
-            container:SetPoint("CENTER", UIParent, "CENTER", x, y)
+            VFlow.ContainerAnchor.ApplyFramePosition(container, group.config, nil)
 
             VFlow.DragFrame.register(container, {
                 label = group.name or ((VFlow.L and VFlow.L["Custom group"] or "Custom group") .. i),
-                onPositionChanged = function(frame, point, x, y)
+                getAnchorConfig = function()
+                    return group.config
+                end,
+                onPositionChanged = function(_, kind, x, y)
+                    if kind ~= "PLAYER_ANCHOR" and kind ~= "SYMMETRIC" then return end
                     VFlow.Store.set(MODULE_KEY, "customGroups." .. i .. ".config.x", x)
                     VFlow.Store.set(MODULE_KEY, "customGroups." .. i .. ".config.y", y)
                 end,
@@ -244,6 +245,10 @@ local function InitGroupContainers()
                     return 0, 0
                 end,
             })
+
+            if VFlow.DragFrame.applyRegisteredPosition then
+                VFlow.DragFrame.applyRegisteredPosition(container)
+            end
 
             -- 自定义组在 UIParent 上，需与 BuffIconCooldownViewer 共用「BUFF」显示条件
             if VFlow.VisibilityControl and VFlow.VisibilityControl.RegisterFrame then
@@ -510,22 +515,24 @@ VFlow.Store.watch(MODULE_KEY, "BuffGroups", function(key, value)
         InitGroupContainers()
     end
 
-    -- 如果是x或y坐标变化，更新容器位置（不重新初始化）
-    if key:find("%.x$") or key:find("%.y$") then
+    if key:find("customGroups%.%d+%.config%.") then
         local groupIndex = tonumber(key:match("customGroups%.(%d+)%."))
-        if groupIndex then
+        if groupIndex and (
+            key:find("%.x$") or key:find("%.y$")
+            or key:find("%.anchorFrame$") or key:find("%.relativePoint$") or key:find("%.playerAnchorPosition$")
+        ) then
             local container = _groupContainers[groupIndex]
-            local db = VFlow.getDB(MODULE_KEY)
-            if container and db and db.customGroups[groupIndex] then
-                local group = db.customGroups[groupIndex]
-                local x = group.config.x or 0
-                local y = group.config.y or (-260 - (groupIndex - 1) * 60)
-                container:ClearAllPoints()
-                container:SetPoint("CENTER", UIParent, "CENTER", x, y)
+            if container and VFlow.DragFrame and VFlow.DragFrame.applyRegisteredPosition then
+                VFlow.DragFrame.applyRegisteredPosition(container)
+            elseif container then
+                local dbp = VFlow.getDB(MODULE_KEY)
+                local gc = dbp and dbp.customGroups and dbp.customGroups[groupIndex] and dbp.customGroups[groupIndex].config
+                if gc then
+                    VFlow.ContainerAnchor.ApplyFramePosition(container, gc, nil)
+                end
             end
+            return
         end
-        -- x/y变化不需要触发其他刷新，直接返回
-        return
     end
 
     -- 其他配置变化：标记映射表需要重建

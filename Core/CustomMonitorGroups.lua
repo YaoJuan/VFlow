@@ -65,10 +65,7 @@ local function createBarContainer(storeKey, spellID, cfg)
     container:SetMovable(true)
     container:SetClampedToScreen(true)
 
-    local x = cfg.x or 0
-    local y = cfg.y or 0
-    container:ClearAllPoints()
-    container:SetPoint("CENTER", UIParent, "CENTER", x, y)
+    VFlow.ContainerAnchor.ApplyFramePosition(container, cfg, nil)
 
     -- 背景条（预览用，Runtime接管后隐藏）
     local bar = container:CreateTexture(nil, "BACKGROUND")
@@ -121,12 +118,18 @@ local function createBarContainer(storeKey, spellID, cfg)
 
     VFlow.DragFrame.register(container, {
         label = labelText,
+        getAnchorConfig = function()
+            local db = VFlow.getDB(MODULE_KEY)
+            local c = db and db[storeKey] and db[storeKey][spellID]
+            return c
+        end,
         suppressSystemEditPreview = function()
             local db = VFlow.getDB(MODULE_KEY)
             local c = db and db[storeKey] and db[storeKey][spellID]
             return c and c.hideInSystemEditMode
         end,
-        onPositionChanged = function(frame, point, nx, ny)
+        onPositionChanged = function(_, kind, nx, ny)
+            if kind ~= "PLAYER_ANCHOR" and kind ~= "SYMMETRIC" then return end
             local db = VFlow.getDB(MODULE_KEY)
             if db and db[storeKey] and db[storeKey][spellID] then
                 db[storeKey][spellID].x = nx
@@ -136,6 +139,10 @@ local function createBarContainer(storeKey, spellID, cfg)
             end
         end,
     })
+
+    if VFlow.DragFrame.applyRegisteredPosition then
+        VFlow.DragFrame.applyRegisteredPosition(container)
+    end
 
     return container
 end
@@ -248,8 +255,10 @@ local function updatePosition(storeKey, spellID)
     if not db or not db[storeKey] or not db[storeKey][spellID] then return end
 
     local cfg = db[storeKey][spellID]
-    container:ClearAllPoints()
-    container:SetPoint("CENTER", UIParent, "CENTER", cfg.x or 0, cfg.y or 0)
+    VFlow.ContainerAnchor.ApplyFramePosition(container, cfg, nil)
+    if VFlow.DragFrame and VFlow.DragFrame.applyRegisteredPosition then
+        VFlow.DragFrame.applyRegisteredPosition(container)
+    end
 end
 
 -- =========================================================
@@ -309,7 +318,8 @@ VFlow.Store.watch(MODULE_KEY, "CustomMonitorGroups", function(key, value)
     local storeKey, spellID = parseStoreKey(key)
     if not storeKey or not spellID then return end
 
-    if key:find("%.x$") or key:find("%.y$") then
+    if key:find("%.x$") or key:find("%.y$")
+        or key:find("%.anchorFrame$") or key:find("%.relativePoint$") or key:find("%.playerAnchorPosition$") then
         updatePosition(storeKey, spellID)
         return
     end

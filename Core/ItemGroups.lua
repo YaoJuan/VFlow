@@ -321,21 +321,9 @@ local function ReleaseGroupContainer(groupId)
     _containers[groupId] = nil
 end
 
-local function ApplyContainerAnchor(container, cfg, groupId)
+local function ApplyContainerAnchor(container, cfg)
     if not container or not cfg then return end
-    local pathPrefix = groupId == 0 and "mainGroup" or ("customGroups." .. groupId .. ".config")
-
-    if cfg.anchorFrame == "player" then
-        local PA = VFlow.PlayerAnchor
-        local ok = PA and PA.ApplyContainerToPlayer(container, cfg.playerAnchorPosition or "TOPRIGHT", cfg.x or 0, cfg.y or 0)
-        if not ok then
-            container:ClearAllPoints()
-            container:SetPoint("CENTER", UIParent, "CENTER", cfg.x or 0, cfg.y or 0)
-        end
-    else
-        container:ClearAllPoints()
-        container:SetPoint("CENTER", UIParent, "CENTER", cfg.x or 0, cfg.y or 0)
-    end
+    VFlow.ContainerAnchor.ApplyFramePosition(container, cfg, nil)
 end
 
 local function EnsureGroupContainer(groupId)
@@ -353,50 +341,28 @@ local function EnsureGroupContainer(groupId)
     container:SetMovable(true)
     container:SetClampedToScreen(true)
 
-    ApplyContainerAnchor(container, cfg, groupId)
+    ApplyContainerAnchor(container, cfg)
 
     local pathPrefix = groupId == 0 and "mainGroup" or ("customGroups." .. groupId .. ".config")
     local label = GetGroupLabel(groupId)
 
-    if cfg.anchorFrame == "player" then
-        VFlow.DragFrame.register(container, {
-            mode = "player_anchor",
-            label = label,
-            playerAnchorPoint = function()
-                return GetConfigForGroupId(groupId).playerAnchorPosition or "TOPRIGHT"
-            end,
-            getPlayerAnchorFrame = function()
-                return VFlow.PlayerAnchor and VFlow.PlayerAnchor.ResolvePlayerFrame()
-            end,
-            getStoredOffsets = function()
-                local c = GetConfigForGroupId(groupId)
-                return c and (c.x or 0) or 0, c and (c.y or 0) or 0
-            end,
-            onPositionChanged = function(_, kind, a, b)
-                if kind ~= "PLAYER_ANCHOR" then return end
-                local c = GetConfigForGroupId(groupId)
-                if not c then return end
-                c.x, c.y = a, b
-                VFlow.Store.set(MODULE_KEY, pathPrefix .. ".x", a)
-                VFlow.Store.set(MODULE_KEY, pathPrefix .. ".y", b)
-            end,
-        })
-    else
-        VFlow.DragFrame.register(container, {
-            label = label,
-            getStoredOffsets = function()
-                local c = GetConfigForGroupId(groupId)
-                return c and (c.x or 0) or 0, c and (c.y or 0) or 0
-            end,
-            onPositionChanged = function(_, kind, a, b)
-                if kind ~= "CENTER" then return end
-                local c = GetConfigForGroupId(groupId)
-                if not c then return end
-                c.x, c.y = a, b
-                VFlow.Store.set(MODULE_KEY, pathPrefix .. ".x", a)
-                VFlow.Store.set(MODULE_KEY, pathPrefix .. ".y", b)
-            end,
-        })
+    VFlow.DragFrame.register(container, {
+        label = label,
+        getAnchorConfig = function()
+            return GetConfigForGroupId(groupId)
+        end,
+        onPositionChanged = function(_, kind, a, b)
+            if kind ~= "PLAYER_ANCHOR" and kind ~= "SYMMETRIC" then return end
+            local c = GetConfigForGroupId(groupId)
+            if not c then return end
+            c.x, c.y = a, b
+            VFlow.Store.set(MODULE_KEY, pathPrefix .. ".x", a)
+            VFlow.Store.set(MODULE_KEY, pathPrefix .. ".y", b)
+        end,
+    })
+
+    if VFlow.DragFrame.applyRegisteredPosition then
+        VFlow.DragFrame.applyRegisteredPosition(container)
     end
 
     _containers[groupId] = container
@@ -887,7 +853,7 @@ local function LayoutStandaloneIconGrid(container, cfg, groupId, icons)
         if type(sc) == "number" and sc > 0 then iconScale = sc end
     end
     container:SetSize(maxRowW * iconScale, totalH * iconScale)
-    ApplyContainerAnchor(container, cfg, groupId)
+    ApplyContainerAnchor(container, cfg)
     Profiler.stop(_pt)
 end
 
@@ -1233,7 +1199,7 @@ local function RefreshStandaloneGroup(groupId)
         else
             container:Hide()
         end
-        ApplyContainerAnchor(container, cfg, groupId)
+        ApplyContainerAnchor(container, cfg)
         return
     end
 
@@ -1255,7 +1221,7 @@ local function RefreshStandaloneGroup(groupId)
         else
             container:Hide()
         end
-        ApplyContainerAnchor(container, cfg, groupId)
+        ApplyContainerAnchor(container, cfg)
         return
     end
 
@@ -1311,9 +1277,7 @@ VFlow.ItemGroups = {
 
 VFlow.on("PLAYER_ENTERING_WORLD", "ItemGroups", function()
     MarkMapDirty()
-    if VFlow.PlayerAnchor and VFlow.PlayerAnchor.InvalidateCache then
-        VFlow.PlayerAnchor.InvalidateCache()
-    end
+    VFlow.ContainerAnchor.InvalidatePlayerFrameCache()
     InitGroupContainers()
     for gid, c in pairs(_containers) do
         if c and VFlow.DragFrame and VFlow.DragFrame.applyRegisteredPosition then
@@ -1401,8 +1365,11 @@ end)
 
 VFlow.Store.watch(MODULE_KEY, "ItemGroups", function(key, value)
     -- 仅坐标变化：只更新锚点，避免整组重建（与 SkillGroups 一致）
+    local anchorFine = (key == "mainGroup.anchorFrame" or key == "mainGroup.relativePoint" or key == "mainGroup.playerAnchorPosition")
+        or (key:match("^customGroups%.%d+%.config%.(anchorFrame|relativePoint|playerAnchorPosition)$") ~= nil)
     local xyOnly = (key == "mainGroup.x" or key == "mainGroup.y")
         or (key:match("^customGroups%.%d+%.config%.[xy]$") ~= nil)
+        or anchorFine
     if xyOnly then
         local gid
         if key:sub(1, 8) == "mainGroup" then
@@ -1414,7 +1381,7 @@ VFlow.Store.watch(MODULE_KEY, "ItemGroups", function(key, value)
             local container = _containers[gid]
             local cfg = GetConfigForGroupId(gid)
             if container and cfg and NeedsStandaloneContainer(cfg) then
-                ApplyContainerAnchor(container, cfg, gid)
+                ApplyContainerAnchor(container, cfg)
                 if VFlow.DragFrame and VFlow.DragFrame.applyRegisteredPosition then
                     VFlow.DragFrame.applyRegisteredPosition(container)
                 end

@@ -122,22 +122,29 @@ local function InitContainer()
     local db = VFlow.getDB(MODULE_KEY)
     local config = db.trinketPotion
 
-    -- 创建容器
     _container = CreateFrame("Frame", "VFlowTrinketPotionContainer", UIParent)
     _container:SetSize(100, 100)
-    _container:SetPoint("CENTER", config.x or 0, config.y or -200)
     _container:SetMovable(true)
     _container:SetClampedToScreen(true)
 
-    -- 注册拖拽
+    VFlow.ContainerAnchor.ApplyFramePosition(_container, config, nil)
+
     if VFlow.DragFrame then
         VFlow.DragFrame.register(_container, {
             label = "饰品&药水",
-            onPositionChanged = function(frame, point, x, y)
+            getAnchorConfig = function()
+                local d = VFlow.getDB(MODULE_KEY)
+                return d and d.trinketPotion
+            end,
+            onPositionChanged = function(_, kind, x, y)
+                if kind ~= "PLAYER_ANCHOR" and kind ~= "SYMMETRIC" then return end
                 VFlow.Store.set(MODULE_KEY, "trinketPotion.x", x)
                 VFlow.Store.set(MODULE_KEY, "trinketPotion.y", y)
-            end
+            end,
         })
+        if VFlow.DragFrame.applyRegisteredPosition then
+            VFlow.DragFrame.applyRegisteredPosition(_container)
+        end
     end
 end
 
@@ -146,9 +153,12 @@ local function UpdateContainerPosition()
 
     local db = VFlow.getDB(MODULE_KEY)
     local config = db.trinketPotion
+    if not config then return end
 
-    _container:ClearAllPoints()
-    _container:SetPoint("CENTER", UIParent, "CENTER", config.x or 0, config.y or -200)
+    VFlow.ContainerAnchor.ApplyFramePosition(_container, config, nil)
+    if VFlow.DragFrame and VFlow.DragFrame.applyRegisteredPosition then
+        VFlow.DragFrame.applyRegisteredPosition(_container)
+    end
 end
 
 -- =========================================================
@@ -565,8 +575,8 @@ end, "player")
 VFlow.Store.watch(MODULE_KEY, "TrinketPotionMonitor", function(key, value)
     if not key:find("^trinketPotion%.") then return end
 
-    -- x/y坐标变化: 只更新位置
-    if key:find("%.x$") or key:find("%.y$") then
+    if key:find("%.x$") or key:find("%.y$")
+        or key == "trinketPotion.anchorFrame" or key == "trinketPotion.relativePoint" or key == "trinketPotion.playerAnchorPosition" then
         UpdateContainerPosition()
         return
     end
