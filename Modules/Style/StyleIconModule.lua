@@ -44,6 +44,8 @@ local defaults = {
     hideDebuffBorder = true,
     hidePandemicIndicator = true,
     hideCooldownBling = true,
+    -- 隐藏 GCD 转圈
+    hideIconGCD = false,
 }
 
 local db = VFlow.getDB(MODULE_KEY, defaults)
@@ -134,6 +136,7 @@ local function renderContent(container, _menuKey)
         
         { type = "checkbox", key = "hideDebuffBorder", label = L["Hide Debuff border (red highlight)"], cols = 24 },
         { type = "checkbox", key = "hideCooldownBling", label = L["Hide cooldown bling (CD complete animation)"], cols = 24 },
+        { type = "checkbox", key = "hideIconGCD", label = L["Hide GCD swipe on icons"], cols = 24 },
         { type = "checkbox", key = "hidePandemicIndicator", label = L["Hide pandemic indicator (DoT refresh highlight)"], cols = 24 },
         
         { type = "spacer", height = 10, cols = 24 },

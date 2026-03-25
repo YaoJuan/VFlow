@@ -78,6 +78,7 @@ local function RefreshStyleCache()
     styleCache.hideDebuffBorder       = db.hideDebuffBorder or false
     styleCache.hidePandemicIndicator  = db.hidePandemicIndicator or false
     styleCache.hideCooldownBling      = db.hideCooldownBling or false
+    styleCache.hideIconGCD            = db.hideIconGCD or false
     styleCache.borderFile             = db.borderFile
     styleCache.borderSize             = db.borderSize or 1
     styleCache.borderOffsetX          = db.borderOffsetX or 0
@@ -517,6 +518,98 @@ local function ApplyBorder(button)
     b:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", anchorOffsetX, -anchorOffsetY)
 end
 
+-- GCD 转圈隐藏
+local pendingHideGcdButtons = {}
+local hideGcdFlushFrame = CreateFrame("Frame")
+hideGcdFlushFrame:Hide()
+
+local function GetButtonSpellIDForGcd(button)
+    if not button then return nil end
+    if button.GetSpellID then
+        local id = button:GetSpellID()
+        if id and (not issecretvalue or not issecretvalue(id)) and type(id) == "number" and id > 0 then
+            return id
+        end
+    end
+    if button.GetAuraSpellID then
+        local id = button:GetAuraSpellID()
+        if id and (not issecretvalue or not issecretvalue(id)) and type(id) == "number" and id > 0 then
+            return id
+        end
+    end
+    local cdID = button.cooldownID
+    if cdID and C_CooldownViewer and C_CooldownViewer.GetCooldownViewerCooldownInfo then
+        local info = C_CooldownViewer.GetCooldownViewerCooldownInfo(cdID)
+        if info then
+            local spellID = info.linkedSpellIDs and info.linkedSpellIDs[1]
+            spellID = spellID or info.overrideSpellID or info.spellID
+            if spellID and spellID > 0 then
+                return spellID
+            end
+        end
+    end
+    return nil
+end
+
+local function HideIconGcdOptionEnabled()
+    local db = VFlow.Store and VFlow.Store.getModuleRef and VFlow.Store.getModuleRef("VFlow.StyleIcon")
+    return db and db.hideIconGCD == true
+end
+
+local function ApplyHideGcdSwipeIfNeeded(button)
+    if not HideIconGcdOptionEnabled() or not button then return end
+    local cd = button.Cooldown
+    if not cd or not cd.IsShown or not cd:IsShown() then return end
+    local spellID = GetButtonSpellIDForGcd(button)
+    if not spellID then return end
+    local ok, cooldown = pcall(function()
+        return C_Spell.GetSpellCooldown(spellID)
+    end)
+    if not ok or type(cooldown) ~= "table" or not cooldown.isOnGCD then return end
+    if button.CooldownFlash and button.CooldownFlash:IsShown() then return end
+    if cd.SetCooldownFromDurationObject and C_DurationUtil and C_DurationUtil.CreateDuration then
+        cd:SetCooldownFromDurationObject(C_DurationUtil.CreateDuration())
+    elseif cd.Clear then
+        pcall(function()
+            cd:Clear()
+        end)
+    end
+end
+
+local function QueueHideGcdSwipeApply(button)
+    if not button then return end
+    pendingHideGcdButtons[button] = true
+    hideGcdFlushFrame:Show()
+end
+
+hideGcdFlushFrame:SetScript("OnUpdate", function(self)
+    self:Hide()
+    local batch = pendingHideGcdButtons
+    pendingHideGcdButtons = {}
+    for b in pairs(batch) do
+        if b and b.Icon then
+            ApplyHideGcdSwipeIfNeeded(b)
+        end
+    end
+end)
+
+local function EnsureHideGcdCooldownHooks(button)
+    if not button or button._vf_hook_hide_gcd_cd or not hooksecurefunc then return end
+    local cd = button.Cooldown
+    if not cd then return end
+    button._vf_hook_hide_gcd_cd = true
+    if cd.SetCooldown then
+        hooksecurefunc(cd, "SetCooldown", function()
+            QueueHideGcdSwipeApply(button)
+        end)
+    end
+    if cd.SetCooldownFromDurationObject then
+        hooksecurefunc(cd, "SetCooldownFromDurationObject", function()
+            QueueHideGcdSwipeApply(button)
+        end)
+    end
+end
+
 -- 视觉隐藏（DebuffBorder / PandemicIcon / CooldownFlash）
 -- hook 回调直接读 styleCache，不再调用 GetBeautifyConfig()
 local function SetupVisualHideHooks(button)
@@ -562,6 +655,7 @@ end
 
 local function ApplyVisualHides(button)
     SetupVisualHideHooks(button)
+    EnsureHideGcdCooldownHooks(button)
 
     if button.DebuffBorder and styleCache.hideDebuffBorder then
         button.DebuffBorder:Hide()
@@ -589,6 +683,9 @@ function StyleApply.ApplyBeautify(button, groupCfg)
     ApplyOverlayHides(button)
     ApplyBorder(button)
     ApplyVisualHides(button)
+    if styleCache.hideIconGCD then
+        QueueHideGcdSwipeApply(button)
+    end
     Profiler.stop(_pt)
 end
 

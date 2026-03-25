@@ -391,6 +391,7 @@ L["Offset Y"] = true
 L["Visual elements"] = true
 L["Hide Debuff border (red highlight)"] = true
 L["Hide cooldown bling (CD complete animation)"] = true
+L["Hide GCD swipe on icons"] = true
 L["Hide pandemic indicator (DoT refresh highlight)"] = true
 L["Note: Some settings may require /reload to fully apply."] = true
 L["Masque detected. Configure VFlow icon style in {Masque settings}. Some VFlow options may be overridden."] = true
