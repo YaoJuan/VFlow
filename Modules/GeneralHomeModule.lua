@@ -26,6 +26,13 @@ VFlow.registerModule(MODULE_KEY, {
 
 local CHANGELOG = {
 	{
+		version = "0.3.3",
+		date = "2026-03-25",
+		content = {
+			"修复BUFF条相关BUG"
+		},
+	}
+	{
 		version = "0.3.2",
 		date = "2026-03-25",
 		content = {
