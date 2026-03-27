@@ -1027,15 +1027,16 @@ local function UpdateChargeBar(barFrame, spellID)
         activeChargeDurObj = barFrame._refreshCharge:GetTimerDuration()
     end
 
-    local chargeCdActive = true
+    local recharging = true
     pcall(function()
-        local sinfo = C_Spell.GetSpellCooldown(spellID)
-        if sinfo and sinfo.isActive ~= nil then
-            chargeCdActive = sinfo.isActive == true
+        if type(currentCharges) == "number" and type(maxCharges) == "number" then
+            if not (issecretvalue and (issecretvalue(currentCharges) or issecretvalue(maxCharges))) then
+                recharging = currentCharges < maxCharges
+            end
         end
     end)
 
-    local shouldShowRecharge = chargeCdActive and (chargeDurObj ~= nil) and (activeChargeDurObj ~= nil)
+    local shouldShowRecharge = recharging and (chargeDurObj ~= nil) and (activeChargeDurObj ~= nil)
 
     if shouldShowRecharge then
         barFrame._refreshCharge:Show()
