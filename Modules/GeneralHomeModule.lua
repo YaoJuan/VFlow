@@ -26,6 +26,14 @@ VFlow.registerModule(MODULE_KEY, {
 
 local CHANGELOG = {
 	{
+		version = "0.3.4",
+		date = "2026-03-27",
+		content = {
+			"修复图形监控 - 充能条相关BUG",
+			"修复自定义技能组的样式相关BUG",
+		},
+	},
+	{
 		version = "0.3.3",
 		date = "2026-03-25",
 		content = {
