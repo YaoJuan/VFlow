@@ -225,11 +225,7 @@ local function ActivateIcon(spellID, itemID)
         -- 刷新布局
         RefreshLayout()
     end)
-
-    -- 刷新布局
-    C_Timer.After(0.1, function()
-        RefreshLayout()
-    end)
+    RefreshLayout()
 end
 
 -- =========================================================
@@ -238,6 +234,7 @@ end
 
 local function ScanItems()
     local _pt = Profiler.start("TPM:ScanItems")
+    InitContainer()
     local db = VFlow.getDB(MODULE_KEY)
     local config = db.trinketPotion
 
@@ -384,6 +381,7 @@ end
 -- =========================================================
 
 function RefreshLayout()
+    InitContainer()
     if not _container then return end
 
     local _pt = Profiler.start("TPM:RefreshLayout")
@@ -550,7 +548,7 @@ end
 -- =========================================================
 
 VFlow.on("PLAYER_ENTERING_WORLD", "TrinketPotionMonitor", function()
-    C_Timer.After(1, function()
+    C_Timer.After(0, function()
         InitContainer()
         ScheduleScan()
     end)
