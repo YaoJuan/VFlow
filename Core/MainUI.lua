@@ -1237,5 +1237,5 @@ VFlow.on("PLAYER_ENTERING_WORLD", "VFlow.MainUI", function()
         end
     end
 
-    print("|cff00ff00VFlow:|r " .. L["Type /vflow to open main UI"])
+    -- print("|cff00ff00VFlow:|r " .. L["Type /vflow to open main UI"])
 end)
