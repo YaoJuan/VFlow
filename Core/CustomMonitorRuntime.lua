@@ -1359,6 +1359,7 @@ UpdateStackBar = function(barFrame, spellID, barKey)
         if barFrame._lastKnownActive then
             barFrame._nilCount = (barFrame._nilCount or 0) + 1
             if barFrame._nilCount > 5 then
+                barFrame._nilCount             = 0
                 barFrame._lastKnownActive       = false
                 barFrame._lastKnownStacks       = 0
                 barFrame._trackedAuraInstanceID = nil
@@ -1695,7 +1696,9 @@ local function UpdateAllBars()
                     barFrame._vf_stackPollCounter = 0
                     forceStackPoll = true
                 end
-                if barFrame._buffBarDirty or barFrame._segsDirty or not barFrame._lastKnownActive or forceStackPoll then
+                -- _nilCount>0：BUFF 刚消失、CDM 暂未同步时防抖计数；须每tick轮询否则仅靠 forceStackPoll 会拖成数秒
+                if barFrame._buffBarDirty or barFrame._segsDirty or not barFrame._lastKnownActive or forceStackPoll
+                    or (barFrame._nilCount or 0) > 0 then
                     UpdateStackBar(barFrame, spellID, barFrame._barKey)
                 end
                 barFrame._buffBarDirty = false
