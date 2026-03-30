@@ -277,6 +277,15 @@ local function LayoutBuffGroups(groupBuckets)
         return
     end
 
+    -- PEW 后首次分类进组时，容器可能尚未建好；此处懒初始化避免首帧落在主组默认位
+    for groupIdx in pairs(groupBuckets) do
+        local g = db.customGroups[groupIdx]
+        if g and g.config and not _groupContainers[groupIdx] then
+            InitGroupContainers()
+            break
+        end
+    end
+
     for groupIdx, allIcons in pairs(groupBuckets) do
         local group = db.customGroups[groupIdx]
         local container = _groupContainers[groupIdx]
@@ -505,7 +514,7 @@ VFlow.BuffGroups = {
 -- =========================================================
 
 VFlow.on("PLAYER_ENTERING_WORLD", "BuffGroups", function()
-    C_Timer.After(1, InitGroupContainers)
+    C_Timer.After(0, InitGroupContainers)
 end)
 
 -- 监听配置变更

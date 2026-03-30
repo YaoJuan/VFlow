@@ -1613,6 +1613,13 @@ SetupHooks = function()
         Profiler.stop(_pt)
     end)
 
+    local function QueueBuffSyncRefresh()
+        if not _pendingSyncRefresh then
+            _pendingSyncRefresh = true
+            _syncRefreshFrame:Show()
+        end
+    end
+
     -- OnCooldownIDSet时：先ApplyStyle建立缓存，再ProvisionalPlace定位
     -- 确保样式初始化在定位之前完成，首次触发不会因样式操作触发重渲染
     local provisionalPlaceAndQueue = function(frame)
@@ -1625,7 +1632,8 @@ SetupHooks = function()
         if VFlow.BuffGroups and VFlow.BuffGroups.isGroupFrame and VFlow.BuffGroups.isGroupFrame(frame) then
             frame._vf_cdmKind = "buff"
             TouchCustomHighlight(frame)
-            RequestBuffRefresh()
+            -- 与主组一致走帧末合并刷新
+            QueueBuffSyncRefresh()
             return
         end
         StyleApply.ApplyIconSize(frame, cfg.width or 40, cfg.height or 40)
@@ -1633,10 +1641,7 @@ SetupHooks = function()
         ProvisionalPlaceBuffFrame(frame, viewer, cfg)
         TouchCustomHighlight(frame)
         -- 合并同一帧内的多次刷新：OnUpdate 在当前帧末尾触发一次 DoBuffRefresh
-        if not _pendingSyncRefresh then
-            _pendingSyncRefresh = true
-            _syncRefreshFrame:Show()
-        end
+        QueueBuffSyncRefresh()
     end
 
     local function enforceScaleOnViewer(viewer)
@@ -1748,7 +1753,7 @@ SetupHooks = function()
             end
             frame._vf_cdmKind = "buff"
             TouchCustomHighlight(frame)
-            RequestBuffRefresh()
+            QueueBuffSyncRefresh()
         end)
 
         if BuffIconCooldownViewer.itemFramePool then
