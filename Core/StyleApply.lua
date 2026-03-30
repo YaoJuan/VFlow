@@ -333,6 +333,81 @@ end
 
 local SPELL_ONLY_GCD_SPELL_ID = 61304
 
+--- 仅用于「仅技能冷却」图标灰度；不依赖 cdInfo.isActive（关联 BUFF 续时间时 isActive 可能抖动导致闪灰）
+local function ComputeSpellOnlyTargetDesaturation(button)
+    if not button._vf_hideBuffCooldownOverlay or not IsSkillCooldownManagerIcon(button) then
+        return 0
+    end
+    local spellID = GetSpellIDForSpellOnlyCooldown(button)
+    if not spellID then return 0 end
+
+    local hasChargeSource = type(button.HasVisualDataSource_Charges) == "function"
+        and button:HasVisualDataSource_Charges()
+
+    local durObj
+    if C_Spell and C_Spell.GetSpellCooldownDuration then
+        local okD, d = pcall(C_Spell.GetSpellCooldownDuration, spellID)
+        if okD then durObj = d end
+    end
+
+    local cdInfo
+    if C_Spell and C_Spell.GetSpellCooldown then
+        local okI, inf = pcall(C_Spell.GetSpellCooldown, spellID)
+        if okI and type(inf) == "table" then
+            cdInfo = inf
+        end
+    end
+
+    if cdInfo and cdInfo.isOnGCD == true then
+        return 0
+    elseif durObj and not hasChargeSource and durObj.EvaluateRemainingDuration then
+        local curve = GetSpellOnlyDesatCurve()
+        if curve then
+            local okEv, v = pcall(durObj.EvaluateRemainingDuration, durObj, curve, 0)
+            return (okEv and v) or 0
+        end
+        return 1
+    end
+    return 0
+end
+
+--- BUFF 续杯/刷新时暴雪会改 SetDesaturation，需在之后按技能 CD 再对齐（思路同 ACDM ApplyStyle 里对 Icon 的 hook）
+local function EnsureSpellOnlyDesaturationHook(button)
+    if button._vf_spellOnlyDesatHooked then return end
+    local tex = button.Icon
+    if not tex or not hooksecurefunc then return end
+    button._vf_spellOnlyDesatHooked = true
+
+    local function reconcile()
+        if button._vf_spellOnlyDesatApplying then return end
+        if not button._vf_hideBuffCooldownOverlay or not IsSkillCooldownManagerIcon(button) then return end
+        local want = ComputeSpellOnlyTargetDesaturation(button)
+        button._vf_spellOnlyDesatApplying = true
+        if tex.SetDesaturation then
+            pcall(tex.SetDesaturation, tex, want)
+        end
+        button._vf_spellOnlyDesatApplying = false
+    end
+
+    if tex.SetDesaturation then
+        hooksecurefunc(tex, "SetDesaturation", function(t, v)
+            if button._vf_spellOnlyDesatApplying then return end
+            if not button._vf_hideBuffCooldownOverlay or not IsSkillCooldownManagerIcon(button) then return end
+            local want = ComputeSpellOnlyTargetDesaturation(button)
+            if math.abs((v or 0) - want) < 0.001 then return end
+            button._vf_spellOnlyDesatApplying = true
+            pcall(t.SetDesaturation, t, want)
+            button._vf_spellOnlyDesatApplying = false
+        end)
+    end
+    if tex.SetDesaturated then
+        hooksecurefunc(tex, "SetDesaturated", function()
+            if button._vf_spellOnlyDesatApplying then return end
+            reconcile()
+        end)
+    end
+end
+
 --- SetUseAuraDisplayTime(false) + DurationObject；仅在 isOnGCD 且无 durObj 时 Clear，避免误清整块遮罩与读秒
 local function ApplySpellOnlyCooldownDisplay(button)
     if not button._vf_hideBuffCooldownOverlay then return end
@@ -368,21 +443,11 @@ local function ApplySpellOnlyCooldownDisplay(button)
         end
     end
 
-    -- 仅 GCD、技能本身已就绪时 isActive 仍可能为 true，用 Step 曲线会得到满去饱和 → 误伤「未在冷却」的图标
     if tex and tex.SetDesaturation then
-        if cdInfo and cdInfo.isOnGCD == true then
-            tex:SetDesaturation(0)
-        elseif durObj and not hasChargeSource and cdInfo and cdInfo.isActive and durObj.EvaluateRemainingDuration then
-            local curve = GetSpellOnlyDesatCurve()
-            if curve then
-                local okEv, v = pcall(durObj.EvaluateRemainingDuration, durObj, curve, 0)
-                tex:SetDesaturation((okEv and v) or 0)
-            else
-                tex:SetDesaturation(1)
-            end
-        else
-            tex:SetDesaturation(0)
-        end
+        local want = ComputeSpellOnlyTargetDesaturation(button)
+        button._vf_spellOnlyDesatApplying = true
+        pcall(tex.SetDesaturation, tex, want)
+        button._vf_spellOnlyDesatApplying = false
     end
 
     if cd.SetUseAuraDisplayTime then
@@ -549,6 +614,7 @@ function StyleApply.ApplyAuraSwipeColor(button, groupCfg)
 
     if button._vf_hideBuffCooldownOverlay then
         EnsureSpellOnlyCooldownSpellUpdateFlush()
+        EnsureSpellOnlyDesaturationHook(button)
     end
 
     if not button._vf_refreshColorHooked then
