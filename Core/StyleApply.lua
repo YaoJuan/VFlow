@@ -295,6 +295,11 @@ local function IsSkillCooldownManagerIcon(button)
     return false
 end
 
+--- 额外 CD 追加到重要/效能条：物品 CD 与灰度由 ItemGroups.ApplyEntryCooldown / SyncIconDesatFromCooldown 管理
+local function IsVFItemAppendSkillSlot(button)
+    return button and button._vf_itemAppendFrame == true
+end
+
 --- 优先 button.cooldownInfo 的 spellID：关联 BUFF 激活时 GetSpellID/GetAuraSpellID 可能指向光环 ID
 local function GetSpellIDForSpellOnlyCooldown(button)
     local info = button and button.cooldownInfo
@@ -335,7 +340,8 @@ local SPELL_ONLY_GCD_SPELL_ID = 61304
 
 --- 仅用于「仅技能冷却」图标灰度；不依赖 cdInfo.isActive（关联 BUFF 续时间时 isActive 可能抖动导致闪灰）
 local function ComputeSpellOnlyTargetDesaturation(button)
-    if not button._vf_hideBuffCooldownOverlay or not IsSkillCooldownManagerIcon(button) then
+    if not button._vf_hideBuffCooldownOverlay or not IsSkillCooldownManagerIcon(button)
+        or IsVFItemAppendSkillSlot(button) then
         return 0
     end
     local spellID = GetSpellIDForSpellOnlyCooldown(button)
@@ -373,14 +379,17 @@ end
 
 --- BUFF 续杯/刷新时暴雪会改 SetDesaturation，需在之后按技能 CD 再对齐（思路同 ACDM ApplyStyle 里对 Icon 的 hook）
 local function EnsureSpellOnlyDesaturationHook(button)
-    if button._vf_spellOnlyDesatHooked then return end
+    if button._vf_spellOnlyDesatHooked or IsVFItemAppendSkillSlot(button) then return end
     local tex = button.Icon
     if not tex or not hooksecurefunc then return end
     button._vf_spellOnlyDesatHooked = true
 
     local function reconcile()
         if button._vf_spellOnlyDesatApplying then return end
-        if not button._vf_hideBuffCooldownOverlay or not IsSkillCooldownManagerIcon(button) then return end
+        if not button._vf_hideBuffCooldownOverlay or not IsSkillCooldownManagerIcon(button)
+            or IsVFItemAppendSkillSlot(button) then
+            return
+        end
         local want = ComputeSpellOnlyTargetDesaturation(button)
         button._vf_spellOnlyDesatApplying = true
         if tex.SetDesaturation then
@@ -392,6 +401,7 @@ local function EnsureSpellOnlyDesaturationHook(button)
     if tex.SetDesaturation then
         hooksecurefunc(tex, "SetDesaturation", function(t, v)
             if button._vf_spellOnlyDesatApplying then return end
+            if IsVFItemAppendSkillSlot(button) then return end
             if not button._vf_hideBuffCooldownOverlay or not IsSkillCooldownManagerIcon(button) then return end
             local want = ComputeSpellOnlyTargetDesaturation(button)
             if math.abs((v or 0) - want) < 0.001 then return end
@@ -403,6 +413,7 @@ local function EnsureSpellOnlyDesaturationHook(button)
     if tex.SetDesaturated then
         hooksecurefunc(tex, "SetDesaturated", function()
             if button._vf_spellOnlyDesatApplying then return end
+            if IsVFItemAppendSkillSlot(button) then return end
             reconcile()
         end)
     end
@@ -410,6 +421,7 @@ end
 
 --- SetUseAuraDisplayTime(false) + DurationObject；仅在 isOnGCD 且无 durObj 时 Clear，避免误清整块遮罩与读秒
 local function ApplySpellOnlyCooldownDisplay(button)
+    if IsVFItemAppendSkillSlot(button) then return end
     if not button._vf_hideBuffCooldownOverlay then return end
     if not IsSkillCooldownManagerIcon(button) then return end
     local cd = button.Cooldown
@@ -542,7 +554,8 @@ local function EnsureSpellOnlyCooldownSpellUpdateFlush()
                 local icons = SL.CollectIcons(viewer)
                 for i = 1, #icons do
                     local b = icons[i]
-                    if b and b._vf_hideBuffCooldownOverlay and IsSkillCooldownManagerIcon(b) then
+                    if b and b._vf_hideBuffCooldownOverlay and IsSkillCooldownManagerIcon(b)
+                        and not IsVFItemAppendSkillSlot(b) then
                         OnCooldownMaskDriverRefresh(b)
                     end
                 end
@@ -550,7 +563,8 @@ local function EnsureSpellOnlyCooldownSpellUpdateFlush()
         end
         if VFlow.SkillGroups and VFlow.SkillGroups.forEachGroupIcon then
             VFlow.SkillGroups.forEachGroupIcon(function(icon)
-                if icon and icon._vf_hideBuffCooldownOverlay and IsSkillCooldownManagerIcon(icon) then
+                if icon and icon._vf_hideBuffCooldownOverlay and IsSkillCooldownManagerIcon(icon)
+                    and not IsVFItemAppendSkillSlot(icon) then
                     OnCooldownMaskDriverRefresh(icon)
                 end
             end)
@@ -564,7 +578,9 @@ end
 
 --- 技能监视器上主 Cooldown 是否正在显示「充能恢复」扇形（与充能层数恢复中的 DurationObject 一致）
 local function SkillButtonChargeRechargeSwipeActive(button)
-    if not button or not IsSkillCooldownManagerIcon(button) then return false end
+    if not button or not IsSkillCooldownManagerIcon(button) or IsVFItemAppendSkillSlot(button) then
+        return false
+    end
     if type(button.HasVisualDataSource_Charges) ~= "function" or not button:HasVisualDataSource_Charges() then
         return false
     end
@@ -597,7 +613,7 @@ local function ApplyCooldownMaskSwipeNow(self)
 end
 
 OnCooldownMaskDriverRefresh = function(self)
-    if self._vf_hideBuffCooldownOverlay and IsSkillCooldownManagerIcon(self) then
+    if self._vf_hideBuffCooldownOverlay and IsSkillCooldownManagerIcon(self) and not IsVFItemAppendSkillSlot(self) then
         ApplySpellOnlyCooldownDisplay(self)
     end
     ApplyCooldownMaskSwipeNow(self)
