@@ -8,7 +8,7 @@
     <Script file="Core\BuffScanner.lua"/>
     <Script file="Core\SkillScanner.lua"/>
     <Script file="Core\BuffGroups.lua"/>
-    <Script file="Core\TrinketPotionMonitor.lua"/>
+    <Script file="Core\ItemBuffMonitor.lua"/>
     <Script file="Core\SkillGroups.lua"/>
     <Script file="Core\ItemAutoData.lua"/>
     <Script file="Core\ItemsManualOrder.lua"/>

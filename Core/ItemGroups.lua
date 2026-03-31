@@ -20,7 +20,7 @@ local UtilityCooldownViewer = _G.UtilityCooldownViewer
 local _spellToGroupId = {}
 local _mapDirty = true
 local _containers = {} -- [0] 主组, [n] 自定义
--- 单独分组：自建图标（与 TrinketPotionMonitor 一致，不复用 CD Viewer 按钮）
+-- 单独分组：自建图标
 local _standaloneFrameLists = {} -- [groupId] = { [1]=frame, ... }
 -- 追加模式：父级为 Essential / Utility Viewer
 local _appendFrameLists = {} -- [viewerName][groupId] = { frames }
@@ -393,7 +393,6 @@ end
 
 -- =========================================================
 -- SECTION 3: 单独分组 — 自建图标与 StyleApply
--- （与 TrinketPotionMonitor 对齐，不复用 CD Viewer 按钮）
 -- =========================================================
 
 --- 物品组内监控条目（单独分组与追加模式共用）

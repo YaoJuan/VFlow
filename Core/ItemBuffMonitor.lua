@@ -1,6 +1,6 @@
 -- =========================================================
 -- SECTION 1: 模块入口
--- TrinketPotionMonitor — 饰品与药水 BUFF 监控
+-- ItemBuffMonitor — 物品 BUFF 监控
 -- =========================================================
 
 local VFlow = _G.VFlow
@@ -90,7 +90,7 @@ local function GetItemSpellInfo(itemID)
 
     -- 策略3: Tooltip扫描（兼容性最好）
     if not _scanTooltip then
-        _scanTooltip = CreateFrame("GameTooltip", "VFlowTrinketPotionScanTooltip", UIParent, "GameTooltipTemplate")
+        _scanTooltip = CreateFrame("GameTooltip", "VFlowItemBuffScanTooltip", UIParent, "GameTooltipTemplate")
         _scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
     end
 
@@ -98,7 +98,7 @@ local function GetItemSpellInfo(itemID)
     _scanTooltip:SetItemByID(itemID)
 
     for i = 1, _scanTooltip:NumLines() do
-        local line = _G["VFlowTrinketPotionScanTooltipTextLeft" .. i]
+        local line = _G["VFlowItemBuffScanTooltipTextLeft" .. i]
         if line then
             local text = line:GetText()
             if text then
@@ -123,7 +123,7 @@ local function InitContainer()
     local db = VFlow.getDB(MODULE_KEY)
     local config = db.trinketPotion
 
-    _container = CreateFrame("Frame", "VFlowTrinketPotionContainer", UIParent)
+    _container = CreateFrame("Frame", "VFlowItemBuffContainer", UIParent)
     _container:SetSize(100, 100)
     _container:SetMovable(true)
     _container:SetClampedToScreen(true)
@@ -132,7 +132,7 @@ local function InitContainer()
 
     if VFlow.DragFrame then
         VFlow.DragFrame.register(_container, {
-            label = "饰品&药水",
+            label = "物品BUFF",
             getAnchorConfig = function()
                 local d = VFlow.getDB(MODULE_KEY)
                 return d and d.trinketPotion
@@ -547,20 +547,20 @@ end
 -- SECTION 9: 事件监听
 -- =========================================================
 
-VFlow.on("PLAYER_ENTERING_WORLD", "TrinketPotionMonitor", function()
+VFlow.on("PLAYER_ENTERING_WORLD", "ItemBuffMonitor", function()
     C_Timer.After(0, function()
         InitContainer()
         ScheduleScan()
     end)
 end)
 
-VFlow.on("PLAYER_EQUIPMENT_CHANGED", "TrinketPotionMonitor", function(event, slotID)
+VFlow.on("PLAYER_EQUIPMENT_CHANGED", "ItemBuffMonitor", function(event, slotID)
     if slotID == 13 or slotID == 14 then
         ScheduleScan()
     end
 end)
 
-VFlow.on("UNIT_SPELLCAST_SUCCEEDED", "TrinketPotionMonitor", function(event, unit, _, spellID)
+VFlow.on("UNIT_SPELLCAST_SUCCEEDED", "ItemBuffMonitor", function(event, unit, _, spellID)
     for sid, poolData in pairs(_iconPool) do
         if sid == spellID then
             ActivateIcon(spellID, poolData.itemID)
@@ -573,7 +573,7 @@ end, "player")
 -- SECTION 10: Store / State 监听
 -- =========================================================
 
-VFlow.Store.watch(MODULE_KEY, "TrinketPotionMonitor", function(key, value)
+VFlow.Store.watch(MODULE_KEY, "ItemBuffMonitor", function(key, value)
     if not key:find("^trinketPotion%.") then return end
 
     if key:find("%.x$") or key:find("%.y$")
@@ -595,7 +595,7 @@ VFlow.Store.watch(MODULE_KEY, "TrinketPotionMonitor", function(key, value)
 end)
 
 -- 监听编辑模式状态变化
-VFlow.State.watch("isEditMode", "TrinketPotionMonitor", function(key, value)
+VFlow.State.watch("isEditMode", "ItemBuffMonitor", function(key, value)
     -- 编辑模式切换时刷新布局
     RefreshLayout()
 end)
@@ -604,7 +604,7 @@ end)
 -- SECTION 11: 公共接口
 -- =========================================================
 
-VFlow.TrinketPotionMonitor = {
+VFlow.ItemBuffMonitor = {
     parseDurationFromItem = function(itemID)
         local _, duration = GetItemSpellInfo(itemID)
         return duration

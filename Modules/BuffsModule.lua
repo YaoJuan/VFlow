@@ -2,7 +2,7 @@
   - Core/BuffGroups.lua：主 BUFF 组与自定义组布局
   - Core/CooldownStyle.lua：监听本模块并应用 BUFF 区样式
   - Core/BuffScanner.lua：维护 State.trackedBuffs（列表数据源，只读）
-  - Core/TrinketPotionMonitor.lua：饰品&药水监控、持续时间解析与列表数据
+  - Core/ItemBuffMonitor.lua：物品BUFF监控、持续时间解析与列表数据
   例外：ensureDefaultPotionsInitialized 在缺省配置时补全默认药水并落盘（档案级一次写入）。
 ]]
 
@@ -110,7 +110,7 @@ local function getDefaultGroupConfig()
     }
 end
 
--- 饰品&药水组的默认配置
+-- 物品BUFF组的默认配置
 local function getTrinketPotionConfig()
     local config = getDefaultGroupConfig()
     config.vertical = true
@@ -546,8 +546,8 @@ local function renderTrinketPotionConfig(container, groupConfig)
 
                             -- 尝试解析持续时间
                             local duration = nil
-                            if VFlow.TrinketPotionMonitor then
-                                duration = VFlow.TrinketPotionMonitor.parseDurationFromItem(itemID)
+                            if VFlow.ItemBuffMonitor then
+                                duration = VFlow.ItemBuffMonitor.parseDurationFromItem(itemID)
                             end
 
                             if duration then
@@ -643,8 +643,8 @@ local function renderTrinketPotionConfig(container, groupConfig)
                     local items = {}
 
                     -- 添加自动检测的饰品
-                    if groupConfig.autoTrinkets and VFlow.TrinketPotionMonitor then
-                        local autoItems = VFlow.TrinketPotionMonitor.getAutoDetectedItems()
+                    if groupConfig.autoTrinkets and VFlow.ItemBuffMonitor then
+                        local autoItems = VFlow.ItemBuffMonitor.getAutoDetectedItems()
                         for _, itemData in ipairs(autoItems) do
                             local itemName, _, _, _, _, _, _, _, _, itemIcon = C_Item.GetItemInfo(itemData.itemID)
                             table.insert(items, {
@@ -744,7 +744,7 @@ local function renderTrinketPotionConfig(container, groupConfig)
             { type = "spacer", height = 10, cols = 24 },
         },
 
-        -- 依附框体与位置（饰品&药水容器）
+        -- 依附框体与位置
         {
             { type = "subtitle", text = L["Position Settings"], cols = 24 },
             { type = "separator", cols = 24 },
