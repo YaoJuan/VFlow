@@ -882,6 +882,65 @@ local function SetStackSegmentsValue(barFrame, value)
     for _, ov  in ipairs(barFrame._thresholdOverlays) do ov:SetValue(value) end
 end
 
+local function BuildChargeSegmentMetrics(container, count, dir, segmentGap)
+    if not container or count < 1 then return nil end
+
+    local totalW = container:GetWidth()
+    local totalH = container:GetHeight()
+    if totalW <= 0 or totalH <= 0 then return nil end
+
+    local ppScale = PP.GetPixelScale(container)
+    local function ToPixel(v) return math.floor(v / ppScale + 0.5) end
+    local function ToLogical(px) return px * ppScale end
+
+    local pxTotalW = ToPixel(totalW)
+    local pxTotalH = ToPixel(totalH)
+    local pxGap = ToPixel(segmentGap)
+    local metrics = {}
+
+    if count == 1 then
+        metrics[1] = {
+            x = 0,
+            y = 0,
+            w = ToLogical(pxTotalW),
+            h = ToLogical(pxTotalH),
+        }
+        return metrics
+    end
+
+    if dir == "vertical" then
+        local pxAvailH = math.max(0, pxTotalH - (count - 1) * pxGap)
+        local prevEdge = 0
+        for i = 1, count do
+            local edge = (i == count) and pxAvailH or math.floor(pxAvailH * i / count + 0.5)
+            local segPxH = math.max(0, edge - prevEdge)
+            metrics[i] = {
+                x = 0,
+                y = ToLogical(prevEdge + (i - 1) * pxGap),
+                w = ToLogical(pxTotalW),
+                h = ToLogical(segPxH),
+            }
+            prevEdge = edge
+        end
+    else
+        local pxAvailW = math.max(0, pxTotalW - (count - 1) * pxGap)
+        local prevEdge = 0
+        for i = 1, count do
+            local edge = (i == count) and pxAvailW or math.floor(pxAvailW * i / count + 0.5)
+            local segPxW = math.max(0, edge - prevEdge)
+            metrics[i] = {
+                x = ToLogical(prevEdge + (i - 1) * pxGap),
+                y = 0,
+                w = ToLogical(segPxW),
+                h = ToLogical(pxTotalH),
+            }
+            prevEdge = edge
+        end
+    end
+
+    return metrics
+end
+
 -- =========================================================
 -- SECTION 11: 技能冷却/充能 更新逻辑
 -- =========================================================
@@ -1076,9 +1135,9 @@ local function UpdateChargeBar(barFrame, spellID)
     if showText and not barFrame._refreshChargeText then
         local tf = cfg.timerFont or {}
         local fc = tf.color or { r = 1, g = 1, b = 1, a = 1 }
-        -- 裁剪容器：跟随 _refreshCharge，隐藏时文字自动隐藏，SetClipsChildren 处理溢出
-        local clip = CreateFrame("Frame", nil, barFrame._refreshCharge)
-        clip:SetAllPoints(barFrame._refreshCharge)
+        local clip = CreateFrame("Frame", nil, barFrame._chargeTextMask or barFrame._textHolder)
+        clip:SetPoint("TOPLEFT", barFrame._refreshCharge, "TOPLEFT", 0, 0)
+        clip:SetPoint("BOTTOMRIGHT", barFrame._refreshCharge, "BOTTOMRIGHT", 0, 0)
         clip:SetFrameLevel(barFrame._textHolder:GetFrameLevel())
         clip:SetClipsChildren(true)
         clip:EnableMouse(false)
@@ -1103,14 +1162,14 @@ local function UpdateChargeBar(barFrame, spellID)
         BFK.SetReverseFill(barFrame._refreshCharge, cfg.barReverse == true)
     end
 
-    -- 与 CreateSegments 一致：按 barDirection 计算单格尺寸，并锚定到主条填充前沿（下一格）
+    -- 保持原有充能动画路径：单格尺寸按首格计算，位置继续锚定到主条填充前沿
     local totalW = barFrame._segContainer:GetWidth()
     local totalH = barFrame._segContainer:GetHeight()
     local barReverse = cfg.barReverse == true
     if totalW > 0 and totalH > 0 then
         local userGap = tonumber(cfg.segmentGap) or 0
         local segmentGap = (maxCharges > 1) and (userGap - borderThickness) or 0
-        local ppScale = PP.GetPixelScale()
+        local ppScale = PP.GetPixelScale(barFrame._segContainer)
         local function ToPixel(v) return math.floor(v / ppScale + 0.5) end
         local function ToLogical(px) return px * ppScale end
 
@@ -1203,51 +1262,11 @@ local function UpdateChargeBar(barFrame, spellID)
         if totalW > 0 and totalH > 0 then
             local userGap = tonumber(cfg.segmentGap) or 0
             local segmentGap = (maxCharges > 1) and (userGap - borderThickness) or 0
-
-            local ppScale = PP.GetPixelScale()
-            local function ToPixel(v) return math.floor(v / ppScale + 0.5) end
-            local function ToLogical(px) return px * ppScale end
-
-            local pxTotalW = ToPixel(totalW)
-            local pxTotalH = ToPixel(totalH)
-            local pxGap = ToPixel(segmentGap)
-
-            local pxSegW_Base, pxSegH_Base, pxRemainder
-            if dir == "vertical" then
-                pxSegW_Base = pxTotalW
-                local pxAvailableH = math.max(0, pxTotalH - (maxCharges - 1) * pxGap)
-                pxSegH_Base = math.floor(pxAvailableH / maxCharges)
-                pxRemainder = pxAvailableH % maxCharges
-            else
-                pxSegH_Base = pxTotalH
-                local pxAvailableW = math.max(0, pxTotalW - (maxCharges - 1) * pxGap)
-                pxSegW_Base = math.floor(pxAvailableW / maxCharges)
-                pxRemainder = pxAvailableW % maxCharges
-            end
-
             local bc = cfg.borderColor or { r = 0.3, g = 0.3, b = 0.3, a = 1 }
-            local currentPxOffset = 0
+            local metrics = BuildChargeSegmentMetrics(barFrame._segContainer, maxCharges, dir, segmentGap)
 
             for i = 1, maxCharges do
-                local thisPxSegW, thisPxSegH
-                if dir == "vertical" then
-                    thisPxSegW = pxSegW_Base
-                    thisPxSegH = pxSegH_Base
-                    if i <= pxRemainder then
-                        thisPxSegH = thisPxSegH + 1
-                    end
-                else
-                    thisPxSegW = pxSegW_Base
-                    if i <= pxRemainder then
-                        thisPxSegW = thisPxSegW + 1
-                    end
-                    thisPxSegH = pxSegH_Base
-                end
-
-                local logOffset = ToLogical(currentPxOffset)
-                local logSegW = ToLogical(thisPxSegW)
-                local logSegH = ToLogical(thisPxSegH)
-
+                local cell = metrics and metrics[i]
                 if not barFrame._chargeBorders[i] then
                     local borderFrame = CreateFrame("Frame", nil, barFrame._segContainer)
                     borderFrame:SetFrameLevel(barFrame._segContainer:GetFrameLevel() + 10)
@@ -1255,21 +1274,21 @@ local function UpdateChargeBar(barFrame, spellID)
                 end
                 local borderFrame = barFrame._chargeBorders[i]
                 borderFrame:ClearAllPoints()
-                local anchor = (dir == "vertical") and "BOTTOMLEFT" or "TOPLEFT"
-                local offsetX = (dir == "vertical") and 0 or logOffset
-                local offsetY = (dir == "vertical") and logOffset or 0
-                borderFrame:SetPoint(anchor, barFrame._segContainer, anchor, offsetX, offsetY)
-                PP.SetSize(borderFrame, logSegW, logSegH)
+                if cell then
+                    local anchor = (dir == "vertical") and "BOTTOMLEFT" or "TOPLEFT"
+                    borderFrame:SetPoint(anchor, barFrame._segContainer, anchor, cell.x, cell.y)
+                    PP.SetSize(borderFrame, cell.w, cell.h)
+                end
 
                 local needRebuild = (not borderFrame._vfBorderThickness)
                     or (borderFrame._vfBorderThickness ~= borderThickness)
-                    or (borderFrame._vfBorderW ~= logSegW)
-                    or (borderFrame._vfBorderH ~= logSegH)
+                    or (borderFrame._vfBorderW ~= (cell and cell.w or 0))
+                    or (borderFrame._vfBorderH ~= (cell and cell.h or 0))
                 if needRebuild then
                     PP.CreateBorder(borderFrame, borderThickness, bc, true)
                     borderFrame._vfBorderThickness = borderThickness
-                    borderFrame._vfBorderW = logSegW
-                    borderFrame._vfBorderH = logSegH
+                    borderFrame._vfBorderW = cell and cell.w or 0
+                    borderFrame._vfBorderH = cell and cell.h or 0
                     borderFrame._vfBorderColor = {
                         r = bc.r or 1,
                         g = bc.g or 1,
@@ -1292,12 +1311,6 @@ local function UpdateChargeBar(barFrame, spellID)
                     end
                 end
                 borderFrame:Show()
-
-                if dir == "vertical" then
-                    currentPxOffset = currentPxOffset + thisPxSegH + pxGap
-                else
-                    currentPxOffset = currentPxOffset + thisPxSegW + pxGap
-                end
             end
         end
     else
@@ -1687,6 +1700,14 @@ local function CreateBarFrame(spellID, cfg, container)
     textHolder:SetFrameLevel(container:GetFrameLevel() + 50)
     textHolder:EnableMouse(false)
     barFrame._textHolder = textHolder
+
+    local chargeTextMask = CreateFrame("Frame", nil, textHolder)
+    chargeTextMask:SetAllPoints(barFrame)
+    chargeTextMask:SetFrameStrata(container:GetFrameStrata())
+    chargeTextMask:SetFrameLevel(textHolder:GetFrameLevel())
+    chargeTextMask:SetClipsChildren(true)
+    chargeTextMask:EnableMouse(false)
+    barFrame._chargeTextMask = chargeTextMask
 
     if showText then
         local tf      = cfg.timerFont or {}

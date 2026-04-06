@@ -90,7 +90,7 @@ function BFK.ApplySegmentCellBorder(borderFrame, cfg)
     PP.CreateBorder(borderFrame, bt, bc, true)
 end
 
---- 在 container 内铺分段：像素取整，末格双锚点拉满消误差。
+--- 在 container 内铺分段：使用累计边界取整，保证不同段数间的公共分界尽量对齐。
 ---@param container Frame 条形容器（如 _segContainer）
 ---@param cfg table segmentGap、borderThickness
 ---@param count number 段数，>=1
@@ -137,68 +137,41 @@ function BFK.LayoutDiscreteBarSegmentFrames(container, cfg, count, dir, segmentF
         return true
     end
 
-    local pxSegW_Base, pxSegH_Base, pxRemainder
     if dir == "vertical" then
-        pxSegW_Base = pxTotalW
         local pxAvailH = math.max(0, pxTotalH - (count - 1) * pxGap)
-        pxSegH_Base = math.floor(pxAvailH / count)
-        pxRemainder = pxAvailH % count
+        local prevEdge = 0
+        for pos = 1, count do
+            local segFrame = segmentFrames[pos]
+            if not segFrame then
+                return false
+            end
+            local edge = (pos == count) and pxAvailH or math.floor(pxAvailH * pos / count + 0.5)
+            local segPxH = math.max(0, edge - prevEdge)
+            local logY = ToLogical(prevEdge + (pos - 1) * pxGap)
+            local logH = ToLogical(segPxH)
+            local logW = ToLogical(pxTotalW)
+            segFrame:ClearAllPoints()
+            segFrame:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", 0, logY)
+            PP.SetSize(segFrame, logW, logH)
+            prevEdge = edge
+        end
     else
-        pxSegH_Base = pxTotalH
         local pxAvailW = math.max(0, pxTotalW - (count - 1) * pxGap)
-        pxSegW_Base = math.floor(pxAvailW / count)
-        pxRemainder = pxAvailW % count
-    end
-
-    local gapLog = ToLogical(pxGap)
-    local currentLogX = 0
-    local currentLogY = 0
-
-    if dir == "vertical" then
-        for pos = 1, count - 1 do
+        local prevEdge = 0
+        for pos = 1, count do
             local segFrame = segmentFrames[pos]
             if not segFrame then
                 return false
             end
-            local thisPxH = pxSegH_Base + (pos <= pxRemainder and 1 or 0)
-            local logH = ToLogical(thisPxH)
-            local logW = ToLogical(pxSegW_Base)
+            local edge = (pos == count) and pxAvailW or math.floor(pxAvailW * pos / count + 0.5)
+            local segPxW = math.max(0, edge - prevEdge)
+            local logX = ToLogical(prevEdge + (pos - 1) * pxGap)
+            local logW = ToLogical(segPxW)
+            local logH = ToLogical(pxTotalH)
             segFrame:ClearAllPoints()
-            segFrame:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", 0, currentLogY)
+            segFrame:SetPoint("TOPLEFT", container, "TOPLEFT", logX, 0)
             PP.SetSize(segFrame, logW, logH)
-            currentLogY = currentLogY + logH + gapLog
-        end
-        do
-            local segFrame = segmentFrames[count]
-            if not segFrame then
-                return false
-            end
-            segFrame:ClearAllPoints()
-            segFrame:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", 0, currentLogY)
-            segFrame:SetPoint("TOPRIGHT", container, "TOPRIGHT", 0, 0)
-        end
-    else
-        for pos = 1, count - 1 do
-            local segFrame = segmentFrames[pos]
-            if not segFrame then
-                return false
-            end
-            local thisPxW = pxSegW_Base + (pos <= pxRemainder and 1 or 0)
-            local logW = ToLogical(thisPxW)
-            local logH = ToLogical(pxSegH_Base)
-            segFrame:ClearAllPoints()
-            segFrame:SetPoint("TOPLEFT", container, "TOPLEFT", currentLogX, 0)
-            PP.SetSize(segFrame, logW, logH)
-            currentLogX = currentLogX + logW + gapLog
-        end
-        do
-            local segFrame = segmentFrames[count]
-            if not segFrame then
-                return false
-            end
-            segFrame:ClearAllPoints()
-            segFrame:SetPoint("TOPLEFT", container, "TOPLEFT", currentLogX, 0)
-            segFrame:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", 0, 0)
+            prevEdge = edge
         end
     end
     return true
