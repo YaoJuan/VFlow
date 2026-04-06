@@ -815,11 +815,12 @@ local function RefreshSkillViewer(viewer, cfg)
 
     if VFlow.ItemGroups and VFlow.ItemGroups.processSkillViewerIcons then
         mainVisible = select(1, VFlow.ItemGroups.processSkillViewerIcons(viewer, mainVisible))
-        mainVisible = StyleLayout.FilterVisible(mainVisible)
     end
 
-    local appendOnly = VFlow.ItemGroups and VFlow.ItemGroups.viewerHasAppendEntries
-        and VFlow.ItemGroups.viewerHasAppendEntries(viewer)
+    local appendOnly = false
+    if #mainVisible == 0 and VFlow.ItemGroups and VFlow.ItemGroups.viewerHasAppendEntries then
+        appendOnly = VFlow.ItemGroups.viewerHasAppendEntries(viewer)
+    end
 
     if #mainVisible == 0 and not appendOnly then
         -- 隐藏所有无纹理的空图标，避免显示黑框
@@ -839,7 +840,7 @@ local function RefreshSkillViewer(viewer, cfg)
         ScanSkillGroupCustomHighlights()
         viewer._vf_refreshing = false
         Profiler.stop(_pt)
-        StyleLayout.InvalidateCollectIconsCache(viewer)
+        -- 纯布局/样式刷新不改图标集合，CollectIcons 仅在结构变化时失效，避免下次刷新重复枚举
         NotifySkillViewerLayoutDependents()
         return
     end
@@ -1105,7 +1106,7 @@ local function RefreshSkillViewer(viewer, cfg)
 
     viewer._vf_refreshing = false
     Profiler.stop(_pt)
-    StyleLayout.InvalidateCollectIconsCache(viewer)
+    -- 纯布局/样式刷新不改图标集合，CollectIcons 仅在结构变化时失效，避免下次刷新重复枚举
     NotifySkillViewerLayoutDependents()
 end
 
@@ -1285,7 +1286,13 @@ local function RefreshBuffViewer(viewer, cfg)
     local iconDir = (viewer.iconDirection == 1) and 1 or -1
     local minSize = 400
 
-    viewer._vf_detachedBuffIcons = {}
+    local detached = viewer._vf_detachedBuffIcons
+    if detached then
+        wipe(detached)
+    else
+        detached = {}
+        viewer._vf_detachedBuffIcons = detached
+    end
 
     if isH then
         local blockW = iconLimit * (w + spacingX) - spacingX
@@ -1377,7 +1384,7 @@ local function RefreshBuffViewer(viewer, cfg)
         -- 3. 最后定位并显示
         StyleLayout.SetPointCached(button, "CENTER", viewer, "CENTER", x, y)
         button:SetAlpha(1)
-        viewer._vf_detachedBuffIcons[#viewer._vf_detachedBuffIcons + 1] = button
+        detached[#detached + 1] = button
     end
 
     -- 布局自定义组（样式应用在LayoutBuffGroups内部完成）
@@ -1401,7 +1408,6 @@ local function RefreshBuffViewer(viewer, cfg)
     end
 
     Profiler.stop(_pt)
-    StyleLayout.InvalidateCollectIconsCache(viewer)
     return true
 end
 

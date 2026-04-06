@@ -986,15 +986,18 @@ local function AppendCellsForGroup(viewer, groupId, cfg)
     local vk = ViewerCacheKey(viewer)
     local list = _appendFrameLists[vk] and _appendFrameLists[vk][groupId]
     if not list then return {} end
-    local entries = BuildAppendEntries(cfg)
     local cells = {}
-    for i = 1, #entries do
-        if ShouldIncludeItemCellInLayout(entries[i], cfg) then
+    -- MergeSkillRowsWithAppend 前会先完成 SyncAllAppendForViewer，这里直接复用同步后的 frame._vf_entry，
+    -- 避免同一轮 Viewer 刷新里重复 BuildAppendEntries / BuildTrackedEntries。
+    for i = 1, #list do
+        local frame = list[i]
+        local entry = frame and frame._vf_entry
+        if entry and ShouldIncludeItemCellInLayout(entry, cfg) then
             cells[#cells + 1] = {
-                frame = list[i],
+                frame = frame,
                 isItem = true,
                 groupId = groupId,
-                entry = entries[i],
+                entry = entry,
             }
         end
     end
