@@ -833,7 +833,8 @@ end
 
 ---@param layoutCfg 条尺寸与样式键位
 ---@param anchorCfg 锚点键位，默认同 layoutCfg；次条可在主条隐藏时改用 primaryBar
-local function ApplyLayoutHost(host, layoutCfg, anchorCfg)
+---@param noPersist boolean|nil 仅应用布局/位置，不做 canonicalSync 写回 Store（避免 x/y 变更导致的递归刷新）
+local function ApplyLayoutHost(host, layoutCfg, anchorCfg, noPersist)
     if not host or not layoutCfg then return end
     anchorCfg = anchorCfg or layoutCfg
     local w, h = GetBarHostPixelDimensions(layoutCfg)
@@ -848,9 +849,16 @@ local function ApplyLayoutHost(host, layoutCfg, anchorCfg)
     local DF = VFlow.DragFrame
     if not (DF and DF.isHostDragging and DF.isHostDragging(host)) then
         CA.ApplyFramePosition(host, anchorCfg, nil, {
-            canonicalSync = (path and store and store.set) and function(nx, ny)
-                store.set(MODULE_KEY, path .. ".x", nx)
-                store.set(MODULE_KEY, path .. ".y", ny)
+            canonicalSync = (not noPersist and path and store and store.set) and function(nx, ny)
+                rb._vf_inCanonicalSync = true
+                local ok, err = pcall(function()
+                    store.set(MODULE_KEY, path .. ".x", nx)
+                    store.set(MODULE_KEY, path .. ".y", ny)
+                end)
+                rb._vf_inCanonicalSync = false
+                if not ok then
+                    error(err)
+                end
             end or nil,
         })
     end
@@ -1308,9 +1316,21 @@ function rb.OnModuleReady()
 
     if not rb._storeWatched then
         rb._storeWatched = true
-        VFlow.Store.watch(MODULE_KEY, "Core.ResourceBars", function()
+        VFlow.Store.watch(MODULE_KEY, "Core.ResourceBars", function(key)
             local d = GetDb()
             if not d then return end
+            if key and (key:find("%.x$") or key:find("%.y$")) then
+                if rb._vf_inCanonicalSync then
+                    return
+                end
+                EnsureFrames()
+                ApplyLayoutHost(primaryHost, d.primaryBar, nil, true)
+                if d.secondaryBar and secondaryHost then
+                    ApplyLayoutHost(secondaryHost, d.secondaryBar, AnchorConfigForSecondary(d), true)
+                end
+                RegisterDrag()
+                return
+            end
             if RS and RS.WipeRuntimeCaches then
                 RS.WipeRuntimeCaches(d)
             end
