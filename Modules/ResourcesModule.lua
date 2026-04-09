@@ -523,6 +523,16 @@ local function appendResourceStyleDetailRows(layout, token)
             cols = 12,
         }
     end
+
+    if token == "SOUL_FRAGMENTS_VENGEANCE" then
+        layout[#layout + 1] = {
+            type = "description",
+            text = L["Threshold colors unsupported"],
+            cols = 24,
+        }
+        return
+    end
+
     layout[#layout + 1] = {
         type = "checkbox",
         key = base .. ".thresholdColorsEnabled",

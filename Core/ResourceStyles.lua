@@ -244,9 +244,12 @@ local function colorCurveApisReady()
     return UnitPowerPercent and C_CurveUtil and C_CurveUtil.CreateColorCurve and CreateColor
 end
 
-function RS.ResolveBarFillColor(style, cur, max)
+function RS.ResolveBarFillColor(style, cur, max, resourceKey)
     if not style or not style.thresholdColorsEnabled then
         return style and style.barColor or { r = 1, g = 1, b = 1, a = 1 }
+    end
+    if resourceKey == "SOUL_FRAGMENTS_VENGEANCE" then
+        return style.barColor or { r = 1, g = 1, b = 1, a = 1 }
     end
     if cur == nil or max == nil then
         return style.barColor

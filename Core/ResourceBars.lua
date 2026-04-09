@@ -278,7 +278,7 @@ local function ApplyTextFont(fs, tf)
 end
 
 local function ResolveBarTierFillColor(resource, style, cur, max)
-    return RS.TryResolveBarFillFromPowerPercent(resource, style) or RS.ResolveBarFillColor(style, cur, max)
+    return RS.TryResolveBarFillFromPowerPercent(resource, style) or RS.ResolveBarFillColor(style, cur, max, resource)
 end
 
 --- PowerType 阈值色可走 UnitPowerPercent；其余资源走 cur/max。
@@ -533,7 +533,10 @@ local function UsesDiscreteSegments(resource)
     return resource and DISCRETE_SEGMENT_RESOURCES[resource] == true
 end
 
-local function CurTooOpaqueForDiscretePips(cur)
+local function CurTooOpaqueForDiscretePips(cur, resource)
+    if resource == "SOUL_FRAGMENTS_VENGEANCE" then
+        return false
+    end
     return cur ~= nil and IsSecretNumber(cur)
 end
 
@@ -606,7 +609,7 @@ local function UpdateDiscreteSegmentDisplay(host, cfg, db, resource, max, cur, s
         return false
     end
 
-    local wantSeg = UsesDiscreteSegments(resource) and type(max) == "number" and max >= 2 and not CurTooOpaqueForDiscretePips(cur)
+    local wantSeg = UsesDiscreteSegments(resource) and type(max) == "number" and max >= 2 and not CurTooOpaqueForDiscretePips(cur, resource)
     if not wantSeg then
         ClearSegmentUI(host)
         return false
@@ -663,6 +666,7 @@ local function UpdateDiscreteSegmentDisplay(host, cfg, db, resource, max, cur, s
         local chargedColor = chargedLookup and RS.ResolveOverchargedComboPointColor(style, fillCol) or nil
         local comboCurrent = useOverchargedCombo and UnitPower("player", resource) or cur
         local dimFillCol = useOverchargedCombo and RS.DimBarColor(fillCol, 0.5) or nil
+        local isSecret = IsSecretNumber(cur)
 
         local function StyleAndShowSegment(segFrame, pos)
             local segSb = segFrame._sb
@@ -674,7 +678,7 @@ local function UpdateDiscreteSegmentDisplay(host, cfg, db, resource, max, cur, s
             BFK.ApplySegmentCellBorder(segFrame._border, cfg)
 
             local gameSlot = reverse and (max - pos + 1) or pos
-            local fill = ComputeDiscretePipFill(resource, host, gameSlot, cur, max, runeOrder, runeFill)
+            local fill = (not isSecret) and ComputeDiscretePipFill(resource, host, gameSlot, cur, max, runeOrder, runeFill) or 0
             local isCharged = chargedLookup and chargedLookup[gameSlot] and chargedColor
             segFrame._bg:SetColorTexture(0, 0, 0, 0)
             local didDual = false
@@ -715,18 +719,27 @@ local function UpdateDiscreteSegmentDisplay(host, cfg, db, resource, max, cur, s
                         dimFillCol.a ~= nil and dimFillCol.a or 1
                     )
                 end
+            elseif isSecret then
+                segSb:SetMinMaxValues(gameSlot - 1, gameSlot)
+                segSb:SetValue(cur)
+                segSb:SetStatusBarColor(
+                    fillCol.r or 1,
+                    fillCol.g or 1,
+                    fillCol.b or 1,
+                    fillCol.a ~= nil and fillCol.a or 1
+                )
             elseif useDual then
                 didDual = SetDualColorForDiscreteSeg(segSb, resource, fill, gameSlot, cur, curInt, rechargeCol, readyCol)
             end
-            if not didDual then
+            if not didDual and not isSecret then
                 if not isCharged and not useOverchargedCombo then
                     segSb:SetMinMaxValues(0, 1)
                     segSb:SetValue(fill)
                     ApplyMainBarFillColor(segSb, resource, style, cur, max)
                 end
-            elseif BFK.ApplyBarProgress then
+            elseif not isSecret and BFK.ApplyBarProgress then
                 BFK.ApplyBarProgress(segSb, 1, fill, useSmoothSeg)
-            else
+            elseif not isSecret then
                 segSb:SetMinMaxValues(0, 1)
                 segSb:SetValue(fill)
             end
@@ -771,13 +784,14 @@ local function UpdateDiscreteSegmentDisplay(host, cfg, db, resource, max, cur, s
     local chargedColor = chargedLookup and RS.ResolveOverchargedComboPointColor(style, fillCol) or nil
     local comboCurrent = useOverchargedCombo and UnitPower("player", resource) or cur
     local dimFillCol = useOverchargedCombo and RS.DimBarColor(fillCol, 0.5) or nil
+    local isSecret = IsSecretNumber(cur)
 
     local reverse = cfg.barReverse == true
     for pos = 1, max do
         local segFrame = host._vf_segFrames and host._vf_segFrames[pos]
         if segFrame and segFrame._sb then
             local gameSlot = reverse and (max - pos + 1) or pos
-            local fill = ComputeDiscretePipFill(resource, host, gameSlot, cur, max, runeOrder, runeFill)
+            local fill = (not isSecret) and ComputeDiscretePipFill(resource, host, gameSlot, cur, max, runeOrder, runeFill) or 0
             local isCharged = chargedLookup and chargedLookup[gameSlot] and chargedColor
             segFrame._bg:SetColorTexture(0, 0, 0, 0)
             local didDual = false
@@ -818,18 +832,27 @@ local function UpdateDiscreteSegmentDisplay(host, cfg, db, resource, max, cur, s
                         dimFillCol.a ~= nil and dimFillCol.a or 1
                     )
                 end
+            elseif isSecret then
+                segFrame._sb:SetMinMaxValues(gameSlot - 1, gameSlot)
+                segFrame._sb:SetValue(cur)
+                segFrame._sb:SetStatusBarColor(
+                    fillCol.r or 1,
+                    fillCol.g or 1,
+                    fillCol.b or 1,
+                    fillCol.a ~= nil and fillCol.a or 1
+                )
             elseif useDual then
                 didDual = SetDualColorForDiscreteSeg(segFrame._sb, resource, fill, gameSlot, cur, curInt, rechargeCol, readyCol)
             end
-            if not didDual then
+            if not didDual and not isSecret then
                 if not isCharged and not useOverchargedCombo then
                     segFrame._sb:SetMinMaxValues(0, 1)
                     segFrame._sb:SetValue(fill)
                     ApplyMainBarFillColor(segFrame._sb, resource, style, cur, max)
                 end
-            elseif BFK.ApplyBarProgress then
+            elseif not isSecret and BFK.ApplyBarProgress then
                 BFK.ApplyBarProgress(segFrame._sb, 1, fill, useSmoothSeg)
-            else
+            elseif not isSecret then
                 segFrame._sb:SetMinMaxValues(0, 1)
                 segFrame._sb:SetValue(fill)
             end

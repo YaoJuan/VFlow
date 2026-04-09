@@ -499,6 +499,7 @@ L["Threshold boundary 1 (value)"] = true
 L["Threshold boundary 2 (value)"] = true
 L["Color above threshold 1"] = true
 L["Color above threshold 2"] = true
+L["Threshold colors unsupported"] = "This resource does not support threshold colors, please use custom trackers instead"
 L["Bar text style"] = true
 L["Humanoid / caster"] = true
 L["Druid Cat Form"] = true
