@@ -542,6 +542,35 @@ _cdmFlushFrame:SetScript("OnUpdate", function(self)
     end
 end)
 
+local function RemoveBarKeyFromFrame(cdmFrame, barKey)
+    if not cdmFrame or not barKey then return end
+    local hookState = _hookedFrames[cdmFrame]
+    if not hookState or not hookState.barIDs or not hookState.barIDs[barKey] then
+        return
+    end
+
+    hookState.barIDs[barKey] = nil
+
+    local barKeys = _frameToBarKeys[cdmFrame]
+    if barKeys then
+        for i = #barKeys, 1, -1 do
+            if barKeys[i] == barKey then
+                table.remove(barKeys, i)
+                break
+            end
+        end
+        if #barKeys == 0 then
+            _frameToBarKeys[cdmFrame] = nil
+            _cdmFlushPending[cdmFrame] = nil
+            _cdmFlushLastAura[cdmFrame] = nil
+        end
+    end
+
+    if not next(hookState.barIDs) then
+        _hookedFrames[cdmFrame] = nil
+    end
+end
+
 local function HookCDMFrame(cdmFrame, barKey)
     if not cdmFrame then return end
     if not _hookedFrames[cdmFrame] then
@@ -557,6 +586,23 @@ local function HookCDMFrame(cdmFrame, barKey)
     if not _hookedFrames[cdmFrame].barIDs[barKey] then
         _hookedFrames[cdmFrame].barIDs[barKey] = true
         table.insert(_frameToBarKeys[cdmFrame], barKey)
+    end
+end
+
+local function BindBarToCDMFrame(barFrame, cdmFrame, barKey)
+    if not barFrame then return end
+    local prevFrame = barFrame._hookedCDMFrame
+    if prevFrame and prevFrame ~= cdmFrame then
+        RemoveBarKeyFromFrame(prevFrame, barKey)
+    end
+    if cdmFrame then
+        HookCDMFrame(cdmFrame, barKey)
+        barFrame._hookedCDMFrame = cdmFrame
+    else
+        if prevFrame then
+            RemoveBarKeyFromFrame(prevFrame, barKey)
+        end
+        barFrame._hookedCDMFrame = nil
     end
 end
 
@@ -577,6 +623,9 @@ local function ClearAllHooks()
     wipe(_spellToCooldownID)
     wipe(_cooldownIDToFrame)
     wipe(_spellMapRetryAt)
+    for _, barFrame in pairs(_activeBuffBars) do
+        barFrame._hookedCDMFrame = nil
+    end
 end
 
 -- =========================================================
@@ -1344,18 +1393,14 @@ UpdateDurationBar = function(barFrame, spellID, barKey)
 
     -- 路径1：CDM 帧
     local cooldownID = _spellToCooldownID[spellID]
-    if cooldownID then
-        local cdmFrame = FindCDMFrame(cooldownID)
-        if cdmFrame then
-            HookCDMFrame(cdmFrame, barKey)
-            if HasAuraInstanceID(cdmFrame.auraInstanceID) then
-                auraActive     = true
-                auraInstanceID = AuraInstanceIDForAPI(cdmFrame.auraInstanceID)
-                unit           = cdmFrame.auraDataUnit or "player"
-                barFrame._trackedAuraInstanceID = auraInstanceID
-                barFrame._trackedUnit           = unit
-            end
-        end
+    local cdmFrame = cooldownID and FindCDMFrame(cooldownID) or nil
+    BindBarToCDMFrame(barFrame, cdmFrame, barKey)
+    if cdmFrame and HasAuraInstanceID(cdmFrame.auraInstanceID) then
+        auraActive     = true
+        auraInstanceID = AuraInstanceIDForAPI(cdmFrame.auraInstanceID)
+        unit           = cdmFrame.auraDataUnit or "player"
+        barFrame._trackedAuraInstanceID = auraInstanceID
+        barFrame._trackedUnit           = unit
     end
 
     -- 路径2：上次记录的 auraInstanceID
@@ -1521,20 +1566,16 @@ UpdateStackBar = function(barFrame, spellID, barKey)
     end
 
     local cooldownID = _spellToCooldownID[spellID]
-    if cooldownID then
-        local cdmFrame = FindCDMFrame(cooldownID)
-        if cdmFrame then
-            HookCDMFrame(cdmFrame, barKey)
-            if HasAuraInstanceID(cdmFrame.auraInstanceID) then
-                local baseUnit = cdmFrame.auraDataUnit or barFrame._trackedUnit or "player"
-                local auraData, trackedUnit = GetAuraDataByInstanceID(
-                    cdmFrame.auraInstanceID, baseUnit, barFrame._trackedUnit)
-                LinkBarToAura(barFrame, barKey, trackedUnit or baseUnit, cdmFrame.auraInstanceID)
-                if auraData then
-                    auraActive = true
-                    stacks     = auraData.applications or 0
-                end
-            end
+    local cdmFrame = cooldownID and FindCDMFrame(cooldownID) or nil
+    BindBarToCDMFrame(barFrame, cdmFrame, barKey)
+    if cdmFrame and HasAuraInstanceID(cdmFrame.auraInstanceID) then
+        local baseUnit = cdmFrame.auraDataUnit or barFrame._trackedUnit or "player"
+        local auraData, trackedUnit = GetAuraDataByInstanceID(
+            cdmFrame.auraInstanceID, baseUnit, barFrame._trackedUnit)
+        LinkBarToAura(barFrame, barKey, trackedUnit or baseUnit, cdmFrame.auraInstanceID)
+        if auraData then
+            auraActive = true
+            stacks     = auraData.applications or 0
         end
     end
 
@@ -1743,6 +1784,7 @@ local function DestroyBar(storeKey, spellID)
 
     if storeKey == "buffs" then
         local barKey = "buffs/" .. spellID
+        BindBarToCDMFrame(barFrame, nil, barKey)
         UnlinkBarFromAura(barKey)
         _activeDurationBars[spellID] = nil
     end
