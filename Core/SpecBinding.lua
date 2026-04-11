@@ -1,5 +1,6 @@
 --[[ Core 依赖：
   - Infra/Store.lua：listProfiles、setCurrentProfile（切换专精时自动切换档案）
+  - Core/MainUI.lua：refresh（设置界面打开时同步「当前配置」等控件）
 ]]
 
 -- =========================================================
@@ -104,6 +105,9 @@ VFlow.on("PLAYER_SPECIALIZATION_CHANGED", "VFlow.SpecBinding", function()
         local ok, err = VFlow.Store.setCurrentProfile(profileName)
         if ok then
             print("|cff00ff00VFlow:|r " .. string.format(L["Switched to config: %s"], profileName))
+            if VFlow.MainUI and VFlow.MainUI.refresh then
+                VFlow.MainUI.refresh()
+            end
         else
             print("|cffff0000VFlow:|r " .. string.format(L["Switch config failed: %s"], tostring(err)))
         end
