@@ -2181,13 +2181,6 @@ SetupHooks = function()
         end
     end
 
-    VFlow.on("UNIT_AURA", "CooldownStyle.BuffAuraLayout", function()
-        local get = VFlow.Store and VFlow.Store.getModuleRef
-        if not get then return end
-        if get("VFlow.BuffBar") then
-            RequestBuffBarRefresh()
-        end
-    end, "player")
 
     if EditModeManagerFrame and not EditModeManagerFrame._vf_vflowBuffBarGeoSync then
         EditModeManagerFrame._vf_vflowBuffBarGeoSync = true
