@@ -8,6 +8,9 @@ if not VFlow then return end
 
 local MODULE_KEY = "VFlow.Resources"
 local EVENT_OWNER = "Core.ResourceBars.Runtime"
+local EVENT_OWNER_AURA = "Core.ResourceBars.Aura"
+local EVENT_OWNER_STAGGER_HEALTH = "Core.ResourceBars.StaggerHealth"
+local EVENT_OWNER_SPELLUSES = "Core.ResourceBars.SpellUses"
 local Utils = VFlow.Utils
 local CR = VFlow.ClassResourceMap
 local CA = VFlow.ContainerAnchor
@@ -25,6 +28,44 @@ local rb = {}
 
 local lastStaggerPercent = 60
 local runtimeEventsRegistered = false
+local POWER_TOKEN_TO_ENUM = {}
+local function BuildPowerTokenToEnum()
+    if not E_PT then return end
+    local function toToken(name)
+        return (name:gsub("(%l)(%u)", "%1_%2")):upper()
+    end
+    for name, value in pairs(E_PT) do
+        if type(value) == "number" then
+            POWER_TOKEN_TO_ENUM[name:upper()] = value
+            POWER_TOKEN_TO_ENUM[toToken(name)] = value
+        end
+    end
+end
+BuildPowerTokenToEnum()
+
+local runtimeEnumPrimary, runtimeEnumSecondary = nil, nil
+local lastPowerRefreshAt = {}
+local lastAuraDrivenRefreshAt = 0
+local auraRuntimeSubscribed = false
+local staggerHealthSubscribed = false
+local spellUsesSubscribed = false
+local staggerUpdateTicker = nil
+local runeBatchPending = false
+
+local function CacheRuntimeEnumsFromContext(ctx)
+    if not ctx then return end
+    runtimeEnumPrimary = type(ctx.primaryResource) == "number" and ctx.primaryResource or nil
+    runtimeEnumSecondary = type(ctx.secondaryResource) == "number" and ctx.secondaryResource or nil
+end
+
+local function RuntimeUsesPlayerAuraResource(resource)
+    if type(resource) ~= "string" then return false end
+    return resource == "MAELSTROM_WEAPON"
+        or resource == "TIP_OF_THE_SPEAR"
+        or resource == "ICICLES"
+        or resource == "SOUL_FRAGMENTS"
+        or resource == "DEVOURER_SOUL"
+end
 
 local function IsSecretNumber(v)
     if v == nil or not issecretvalue then
@@ -216,7 +257,6 @@ end
 local primaryHost, secondaryHost
 local primarySB, secondarySB
 local primaryText, secondaryText
-local tickFrame
 local initialized = false
 
 local SetDiscreteRechargeTicker
@@ -1191,16 +1231,140 @@ SetDiscreteRechargeTicker = function(host, want, isSecondary)
     end
 end
 
-local function RefreshAll()
-    local context = BuildRuntimeContext()
-    UpdateOneSlot(context, false, false)
-    UpdateOneSlot(context, true, false)
+local RefreshValuesOnly
+
+local function StartStaggerTicker()
+    if staggerUpdateTicker then return end
+    staggerUpdateTicker = C_Timer.NewTicker(0.05, function()
+        RefreshValuesOnly()
+    end)
 end
 
-local function RefreshValuesOnly()
+local function StopStaggerTicker()
+    if staggerUpdateTicker then
+        staggerUpdateTicker:Cancel()
+        staggerUpdateTicker = nil
+    end
+end
+
+local POWER_FREQUENT_MIN_INTERVAL = 0.05
+local lastSpellUsesRefreshAt = 0
+
+local function OnUnitPowerFrequent(_, unitTarget, powerToken)
+    if unitTarget ~= "player" or not powerToken then return end
+    local pt = POWER_TOKEN_TO_ENUM[powerToken]
+    if not pt then return end
+    if pt ~= runtimeEnumPrimary and pt ~= runtimeEnumSecondary then
+        return
+    end
+    local now = GetTime()
+    local last = lastPowerRefreshAt[pt]
+    if last and (now - last) < POWER_FREQUENT_MIN_INTERVAL then
+        return
+    end
+    lastPowerRefreshAt[pt] = now
+    RefreshValuesOnly()
+end
+
+local function OnUnitMaxPower()
+    RefreshValuesOnly()
+end
+
+local function OnSpellUpdateUses()
+    local now = GetTime()
+    if now - lastSpellUsesRefreshAt < 0.05 then return end
+    lastSpellUsesRefreshAt = now
+    RefreshValuesOnly()
+end
+
+local function OnStaggerMaxHealth()
+    RefreshValuesOnly()
+end
+
+local function FlushRunePowerCoalesced()
+    runeBatchPending = false
+    RefreshValuesOnly()
+end
+
+local function OnRunePowerUpdate()
+    if runeBatchPending then return end
+    runeBatchPending = true
+    C_Timer.After(0, FlushRunePowerCoalesced)
+end
+
+--- 注册：光环读条、醉拳、复仇灵魂裂劈层数
+local function SyncDynamicSubscriptions(ctx)
+    if not ctx then
+        ctx = BuildRuntimeContext()
+        CacheRuntimeEnumsFromContext(ctx)
+    end
+
+    local needAura = RuntimeUsesPlayerAuraResource(ctx.primaryResource)
+        or RuntimeUsesPlayerAuraResource(ctx.secondaryResource)
+    if needAura and not auraRuntimeSubscribed then
+        VFlow.on("UNIT_AURA", EVENT_OWNER_AURA, function()
+            local now = GetTime()
+            if now - lastAuraDrivenRefreshAt < 0.05 then
+                return
+            end
+            lastAuraDrivenRefreshAt = now
+            RefreshValuesOnly()
+        end, "player")
+        auraRuntimeSubscribed = true
+    elseif not needAura and auraRuntimeSubscribed then
+        VFlow.off(EVENT_OWNER_AURA)
+        auraRuntimeSubscribed = false
+    end
+
+    local needSpellUses = (ctx.specID == 581)
+        and (ctx.primaryResource == "SOUL_FRAGMENTS_VENGEANCE" or ctx.secondaryResource == "SOUL_FRAGMENTS_VENGEANCE")
+    if needSpellUses and not spellUsesSubscribed then
+        VFlow.on("SPELL_UPDATE_USES", EVENT_OWNER_SPELLUSES, OnSpellUpdateUses)
+        spellUsesSubscribed = true
+    elseif not needSpellUses and spellUsesSubscribed then
+        VFlow.off(EVENT_OWNER_SPELLUSES)
+        spellUsesSubscribed = false
+    end
+
+    local needStagger = ctx.primaryResource == "STAGGER" or ctx.secondaryResource == "STAGGER"
+    if needStagger then
+        if not staggerHealthSubscribed then
+            VFlow.on("UNIT_MAXHEALTH", EVENT_OWNER_STAGGER_HEALTH, OnStaggerMaxHealth, "player")
+            staggerHealthSubscribed = true
+        end
+        local st = UnitStagger("player") or 0
+        if InCombatLockdown() or (type(st) == "number" and not IsSecretNumber(st) and st > 0) then
+            StartStaggerTicker()
+        else
+            StopStaggerTicker()
+        end
+    else
+        if staggerHealthSubscribed then
+            VFlow.off(EVENT_OWNER_STAGGER_HEALTH)
+            staggerHealthSubscribed = false
+        end
+        StopStaggerTicker()
+    end
+end
+
+local function RefreshAll()
     local context = BuildRuntimeContext()
+    CacheRuntimeEnumsFromContext(context)
+    UpdateOneSlot(context, false, false)
+    UpdateOneSlot(context, true, false)
+    SyncDynamicSubscriptions(context)
+end
+
+RefreshValuesOnly = function()
+    local context = BuildRuntimeContext()
+    CacheRuntimeEnumsFromContext(context)
     UpdateOneSlot(context, false, true)
     UpdateOneSlot(context, true, true)
+    SyncDynamicSubscriptions(context)
+end
+
+local function HandleLayoutRuntimeEvent()
+    RefreshAll()
 end
 
 -- =========================================================
@@ -1225,37 +1389,6 @@ function rb.OnSkillViewerLayoutChanged()
     end
 end
 
-local function TickResourceBars(frame, elapsed)
-    local d = GetDb()
-    if not d or not primaryHost then
-        return
-    end
-    local priOff = d.primaryBar.enabled == false
-    local secOff = not d.secondaryBar or d.secondaryBar.enabled == false
-    if priOff and secOff then
-        return
-    end
-    local secCfg = d.secondaryBar or {}
-    local fast = (d.primaryBar.fasterUpdates == nil or d.primaryBar.fasterUpdates == true)
-        or (secCfg.fasterUpdates == nil or secCfg.fasterUpdates == true)
-    local interval = fast and 0.1 or 0.25
-    frame._vf_tickAcc = (frame._vf_tickAcc or 0) + elapsed
-    if frame._vf_tickAcc < interval then
-        return
-    end
-    frame._vf_tickAcc = 0
-    RefreshValuesOnly()
-end
-
-local function HandleRuntimeEvent(event)
-    if event == "UNIT_MAXPOWER" or event == "UNIT_POWER_UPDATE"
-        or event == "UNIT_AURA" or event == "RUNE_POWER_UPDATE" then
-        RefreshValuesOnly()
-        return
-    end
-    RefreshAll()
-end
-
 local function RegisterRuntimeEvents()
     if runtimeEventsRegistered then
         return
@@ -1264,17 +1397,16 @@ local function RegisterRuntimeEvents()
     local registerEvent = (Profiler and Profiler.registerEvent) or function(event, owner, callback, units)
         VFlow.on(event, owner, callback, units)
     end
-    registerEvent("PLAYER_SPECIALIZATION_CHANGED", EVENT_OWNER, HandleRuntimeEvent, "player", "RB:HandleRuntimeEvent", "count")
-    registerEvent("PLAYER_REGEN_ENABLED", EVENT_OWNER, HandleRuntimeEvent, nil, "RB:HandleRuntimeEvent", "count")
-    registerEvent("PLAYER_REGEN_DISABLED", EVENT_OWNER, HandleRuntimeEvent, nil, "RB:HandleRuntimeEvent", "count")
-    registerEvent("UNIT_MAXPOWER", EVENT_OWNER, HandleRuntimeEvent, "player", "RB:HandleRuntimeEvent", "count")
-    registerEvent("UNIT_POWER_UPDATE", EVENT_OWNER, HandleRuntimeEvent, "player", "RB:HandleRuntimeEvent", "count")
-    registerEvent("UNIT_AURA", EVENT_OWNER, HandleRuntimeEvent, "player", "RB:HandleRuntimeEvent", "count")
+    registerEvent("PLAYER_SPECIALIZATION_CHANGED", EVENT_OWNER, HandleLayoutRuntimeEvent, "player", "RB:HandleLayoutRuntimeEvent", "count")
+    registerEvent("PLAYER_REGEN_ENABLED", EVENT_OWNER, HandleLayoutRuntimeEvent, nil, "RB:HandleLayoutRuntimeEvent", "count")
+    registerEvent("PLAYER_REGEN_DISABLED", EVENT_OWNER, HandleLayoutRuntimeEvent, nil, "RB:HandleLayoutRuntimeEvent", "count")
+    registerEvent("UNIT_MAXPOWER", EVENT_OWNER, OnUnitMaxPower, "player", "RB:OnUnitMaxPower", "count")
+    registerEvent("UNIT_POWER_FREQUENT", EVENT_OWNER, OnUnitPowerFrequent, "player", "RB:OnUnitPowerFrequent", "count")
     if E_PT and E_PT.Runes then
-        registerEvent("RUNE_POWER_UPDATE", EVENT_OWNER, HandleRuntimeEvent, nil, "RB:HandleRuntimeEvent", "count")
+        registerEvent("RUNE_POWER_UPDATE", EVENT_OWNER, OnRunePowerUpdate, nil, "RB:OnRunePowerUpdate", "count")
     end
     if select(2, UnitClass("player")) == "DRUID" then
-        registerEvent("UPDATE_SHAPESHIFT_FORM", EVENT_OWNER, HandleRuntimeEvent, nil, "RB:HandleRuntimeEvent", "count")
+        registerEvent("UPDATE_SHAPESHIFT_FORM", EVENT_OWNER, HandleLayoutRuntimeEvent, nil, "RB:HandleLayoutRuntimeEvent", "count")
     end
 end
 
@@ -1305,7 +1437,7 @@ local function EnsureBarLabel(host, existingFs)
 end
 
 local function EnsureFrames()
-    if primaryHost and secondaryHost and tickFrame then
+    if primaryHost and secondaryHost then
         return
     end
 
@@ -1343,12 +1475,6 @@ local function EnsureFrames()
     else
         secondarySB = secondaryHost._vf_sb or secondarySB
         secondaryText = EnsureBarLabel(secondaryHost, secondaryText)
-    end
-
-    if not tickFrame then
-        tickFrame = CreateFrame("Frame", nil, UIParent)
-        tickFrame._vf_tickAcc = 0
-        tickFrame:SetScript("OnUpdate", TickResourceBars)
     end
 end
 
@@ -1479,14 +1605,6 @@ if Profiler and Profiler.registerCount then
         return SetDiscreteRechargeTicker
     end, function(fn)
         SetDiscreteRechargeTicker = fn
-    end)
-    Profiler.registerCount("RB:TickResourceBars", function()
-        return TickResourceBars
-    end, function(fn)
-        TickResourceBars = fn
-        if tickFrame then
-            tickFrame:SetScript("OnUpdate", fn)
-        end
     end)
 end
 

@@ -89,7 +89,6 @@ local function getDefaultBarConfig()
         borderThickness = "1",
         segmentGap = 0,
         smoothProgress = true,
-        fasterUpdates = false,
         anchorFrame = "essential",
         relativePoint = "TOP",
         playerAnchorPosition = "BOTTOMLEFT",
@@ -354,7 +353,6 @@ local function buildBarLayout(pageTitle, menuKey)
                 cols = 8,
             },
             { type = "checkbox",  key = "smoothProgress", label = L["Smooth bar fill"],    cols = 12 },
-            { type = "checkbox",  key = "fasterUpdates",  label = L["Faster bar refresh"], cols = 12 },
             { type = "spacer",    height = 10,            cols = 24 },
 
             {
