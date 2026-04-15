@@ -1001,30 +1001,42 @@ local function UpdateRegularCooldownBar(barFrame, spellID)
     local cfg = barFrame._cfg
     local showGraphics = ShouldRenderGraphics(cfg)
     local showText = ShouldRenderText(cfg)
-    local cdInfo
-    pcall(function()
-        cdInfo = C_Spell.GetSpellCooldown(spellID)
-    end)
-    local isOnGCD = cdInfo and cdInfo.isOnGCD == true
-    local spellCdActive = true
-    if cdInfo and cdInfo.isActive ~= nil then
-        spellCdActive = cdInfo.isActive == true
-    end
-
-    local durObj
     local shadowCD = showGraphics and GetOrCreateShadowCooldown(barFrame) or nil
-    if not isOnGCD then
-        pcall(function() durObj = C_Spell.GetSpellCooldownDuration(spellID) end)
-    end
-    if showGraphics then
-        if isOnGCD then
-            shadowCD:Clear()
-        elseif durObj and spellCdActive then
-            shadowCD:Clear()
-            pcall(function() shadowCD:SetCooldownFromDurationObject(durObj, true) end)
-        else
-            shadowCD:Clear()
+
+    local isOnGCD, spellCdActive, durObj
+    if barFrame._cdDirty then
+        -- 冷却事件后重新查询 API，更新缓存与 shadow cooldown
+        barFrame._cdDirty = false
+        local cdInfo
+        pcall(function()
+            cdInfo = C_Spell.GetSpellCooldown(spellID)
+        end)
+        isOnGCD = cdInfo and cdInfo.isOnGCD == true
+        spellCdActive = true
+        if cdInfo and cdInfo.isActive ~= nil then
+            spellCdActive = cdInfo.isActive == true
         end
+        if not isOnGCD then
+            pcall(function() durObj = C_Spell.GetSpellCooldownDuration(spellID) end)
+        end
+        barFrame._cachedIsOnGCD       = isOnGCD
+        barFrame._cachedSpellCdActive = spellCdActive
+        barFrame._cachedDurObj        = durObj
+        if showGraphics then
+            if isOnGCD then
+                shadowCD:Clear()
+            elseif durObj and spellCdActive then
+                shadowCD:Clear()
+                pcall(function() shadowCD:SetCooldownFromDurationObject(durObj, true) end)
+            else
+                shadowCD:Clear()
+            end
+        end
+    else
+        -- 无冷却事件：复用缓存，跳过全部 API 调用
+        isOnGCD       = barFrame._cachedIsOnGCD
+        spellCdActive = barFrame._cachedSpellCdActive
+        durObj        = barFrame._cachedDurObj
     end
 
     local isOnCooldown = false
@@ -1788,6 +1800,11 @@ local function CreateBarFrame(spellID, cfg, container)
     barFrame._cachedMaxCharges     = 0
     barFrame._needsChargeRefresh   = true
     barFrame._lastChargeWasFull    = false
+    -- 普通冷却脏标记（true=需重新查询API，false=复用缓存）
+    barFrame._cdDirty              = true
+    barFrame._cachedIsOnGCD        = false
+    barFrame._cachedSpellCdActive  = true
+    barFrame._cachedDurObj         = nil
     barFrame._lastFillMode         = nil
     barFrame._chargeBar            = nil  -- OctoChargeBar方案：主充能条
     barFrame._refreshCharge        = nil  -- OctoChargeBar方案：充能进度条
@@ -2069,12 +2086,21 @@ VFlow.on("PLAYER_REGEN_ENABLED", "CustomMonitorRuntime", function()
     ClearAllHooks()
     for _, barFrame in pairs(_activeSkillBars) do
         barFrame._needsChargeRefresh = true
+        barFrame._cdDirty = true
     end
 end)
 
 VFlow.on("SPELL_UPDATE_CHARGES", "CustomMonitorRuntime", function()
     for _, barFrame in pairs(_activeSkillBars) do
         barFrame._needsChargeRefresh = true
+    end
+end)
+
+VFlow.on("SPELL_UPDATE_COOLDOWNS", "CustomMonitorRuntime", function()
+    for _, barFrame in pairs(_activeSkillBars) do
+        if not barFrame._cfg.isChargeSpell then
+            barFrame._cdDirty = true
+        end
     end
 end)
 
